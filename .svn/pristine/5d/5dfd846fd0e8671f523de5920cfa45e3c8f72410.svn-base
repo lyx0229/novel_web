@@ -1,0 +1,54 @@
+package com.novel.api.controller;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.novel.api.entity.CheckInfo;
+import com.novel.api.entity.JSONResponse;
+import com.novel.api.entity.WeixinUserInfo;
+import com.novel.api.service.CheckInfoService;
+import com.novel.api.service.CommonService;
+
+/**
+ * 签到
+ * 
+ * @author Administrator
+ *
+ */
+
+@RestController
+@RequestMapping("/check")
+public class CheckController {
+	Logger logger = LoggerFactory.getLogger(CheckController.class); 
+	@Autowired
+	CheckInfoService checkInfoService;
+	@Autowired
+	CommonService comService;
+
+	/**
+	 * 签到
+	 * 
+	 * @param password
+	 * @param wx_name
+	 * @param wxid
+	 * @return
+	 */
+	@RequestMapping(value = "/checkin", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse checkin(int user_id) {
+		//判断当日是否已签到
+		CheckInfo checkInfo= checkInfoService.findByUserIDAndTime(user_id);
+		if(checkInfo!=null){
+		return JSONResponse.error("今日已签到");
+		}
+		// 数据入库
+		WeixinUserInfo user = checkInfoService.checkin(user_id);
+		return JSONResponse.success(user);
+	}
+
+}

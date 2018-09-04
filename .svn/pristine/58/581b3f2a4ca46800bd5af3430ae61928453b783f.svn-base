@@ -1,0 +1,123 @@
+package com.novel.api.controller;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.novel.api.entity.JSONResponse;
+import com.novel.api.entity.NovelDetail;
+import com.novel.api.entity.NovelScheme;
+import com.novel.api.service.NovelService;
+import com.novel.common.utils.ReadTXT;
+import com.novel.common.utils.Util;
+import com.novel.config.BusinessConfig;
+
+/**
+ * 小说推广
+ * 
+ * @author Administrator
+ *
+ */
+
+@Controller
+@RequestMapping("/scheme")
+public class SchemeController {
+	Logger logger = LoggerFactory.getLogger(NovelController.class);
+
+	@Autowired
+	NovelService novelService;
+	@SuppressWarnings("rawtypes")
+	@Autowired
+	RedisTemplate redisTemplate;
+	@Autowired
+	BusinessConfig  businessConfig;
+
+	/**
+	 * 小说推广
+	 * 
+	 * @return
+	 */
+	@GetMapping("{id}")
+	public String novel_scheme(@PathVariable(name = "id") int id,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		logger.info("进入小说推广页面");
+		NovelScheme scheme=novelService.findNovelSchemeByID(id);
+		if(scheme==null){
+			logger.info("id:"+id+"推广信息有误,请联系平台!");
+			return null;
+		}
+		int novel_detail_id = scheme.getNovel_detail_id();
+		String param =scheme.getChannel();
+		if(novel_detail_id==0){
+			logger.info("id:"+id+"推广信息有误,请联系平台!");
+			return null;
+		}
+		if(param.isEmpty()){
+			logger.info("id:"+id+"推广信息有误,请联系平台!");
+			return null;
+		}
+		
+		scheme.setClick_no(scheme.getClick_no()+1);
+		System.out.println("当前时间:"+Util.getDate());
+		scheme.setUpdate_time(Util.getDate());
+		novelService.saveAndUpdate(scheme);
+		
+	    String redirecturl=businessConfig.DOMAIN_URL+"/home.html?id="+id+"&novel_detail_id="+novel_detail_id+"&param="+param;
+	    logger.info("推广连接："+redirecturl);
+		resp.sendRedirect(redirecturl);
+		return null;
+	}
+
+	/**
+	 * 判断小说是否收费并读取小说
+	 * 
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	@RequestMapping(value = "/novel_read", method = { RequestMethod.POST, RequestMethod.GET })
+	public JSONResponse novel_judge(int novel_detail_id) {
+		logger.info("进入判断小说是否收费,并读取推广小说");
+		logger.info("novel_detail_id：" + novel_detail_id);
+		int pay_status = 0;
+		String key = "novel_detail_" + novel_detail_id;
+		NovelDetail detail = novelService.findNovelDetailByID(novel_detail_id);
+		if (detail == null) {
+			return JSONResponse.error("章节不存在");
+		}
+		if (detail.getFree_state() == 1) {// 收费
+			return JSONResponse.error("请关注公众号，阅读更多内容");
+		}
+		List<String> conment = new ArrayList<>();
+		ValueOperations<String, List<String>> operations = redisTemplate.opsForValue();
+		boolean hasKey = redisTemplate.hasKey(key);
+		if (hasKey) {
+			logger.info("从缓存中读取");
+			conment = operations.get(key);
+		} else {
+			logger.info("从本地读取");
+			conment = ReadTXT.getFile(detail.getChapter_url());
+			operations.set(key, conment, 12, TimeUnit.HOURS);
+		}
+		pay_status = 1;
+		return JSONResponse.success(conment, pay_status, "读取小说成功");
+	}
+
+}

@@ -1,0 +1,41 @@
+package com.novel.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.stereotype.Component;
+/**
+ * 获取配置信息
+ * @author Administrator
+ *
+ */
+@Component
+@PropertySource("classpath:business.properties")
+public class BusinessConfig {
+
+    @Value("${bookpeas}")
+	public int bookpeas;//每天签到获取的书豆
+    
+    @Value("${chapter_peas}")
+    public int chapter_peas;//每章节购买所需书豆
+    /*微信参数*/
+    @Value("${APPID}")
+    public String APPID;//微信APPID
+    
+    @Value("${APPSECRET}")
+    public String APPSECRET;//微信APPSECRET
+    
+    @Value("${TOKEN}")
+    public String TOKEN;//微信TOKEN
+    
+    @Value("${KEY}")
+    public String KEY;//MD5key
+    
+    @Value("${NOTIFY_URL}")
+    public String NOTIFY_URL;//支付回调
+    
+    @Value("${DOMAIN_URL}")
+    public String DOMAIN_URL;//域名
+    
+    @Value("${MEMBERID}")
+    public String MEMBERID;//商户号
+}

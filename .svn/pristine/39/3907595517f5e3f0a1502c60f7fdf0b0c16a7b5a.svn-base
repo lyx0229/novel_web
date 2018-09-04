@@ -1,0 +1,811 @@
+package com.weixin.controller;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.http.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.alibaba.fastjson.JSONObject;
+import com.novel.api.entity.WeixinUserInfo;
+import com.novel.api.service.UserService;
+import com.novel.config.BusinessConfig;
+import com.weixin.utils.WXAuthUtil;
+
+@Controller
+@RequestMapping("/wx")
+public class WXLoginController {
+	Logger logger = LoggerFactory.getLogger(WXLoginController.class); 
+	@Autowired
+	UserService  userService;
+	@Autowired
+	BusinessConfig  businessConfig;
+    @Autowired
+	StringRedisTemplate stringRedisTemplate;
+	
+	
+	
+	@RequestMapping(value="/access",  method = {RequestMethod.POST,RequestMethod.GET})
+	public @ResponseBody String WeChatInterface(HttpServletRequest request, HttpServletResponse response)throws Exception{
+ 	   System.out.println("-------------验证微信服务号信息开始----------");
+ 	   // 微信加密签名
+ 	   String signature = request.getParameter("signature");
+ 	   // 时间戳
+ 	   String timestamp = request.getParameter("timestamp");
+ 	   // 随机数
+ 	   String nonce = request.getParameter("nonce");
+ 	   // 随机字符串
+ 	   String echostr = request.getParameter("echostr");
+ 	   
+ 	   logger.info("signature is :"+signature+"timestamp is"+timestamp+"nonce is :"+nonce);
+ 	   if (WXAuthUtil.checkSignature(signature, timestamp, nonce)){
+ 		   System.out.println("-----------验证微信服务号结束------------");
+ 		   System.out.println("echostr:"+echostr);
+// 		   acceptMessage(request,response);
+ 		   return echostr;
+ 	   }else {
+ 		   // 此处可以实现其他逻辑
+ 		   logger.info("不是微信服务器发过来的请求，请小心！");
+ 		   return null;
+ 	   }  
+
+	}
+	
+	/**
+	 * 公众号微信登录授权(个人中心)
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws ParseException
+	 * @throws UnsupportedEncodingException 
+	 * @parameter
+	 */
+	    @RequestMapping(value = "/wxLogin", method = {RequestMethod.POST,RequestMethod.GET})
+	    public String wxLogin(HttpServletRequest request,
+	            HttpServletResponse response)
+	            throws ParseException, UnsupportedEncodingException {
+	    	    logger.info("公众号微信登录授权");
+	    	    String backUrl=businessConfig.DOMAIN_URL+"/wx/callBack";
+	        //这个url的域名必须要进行再公众号中进行注册验证，这个地址是成功后的回调地址snsapi_base
+	        logger.info("backUrl："+backUrl);
+	        // 第一步：用户同意授权，获取code
+	        String url ="https://open.weixin.qq.com/connect/oauth2/authorize?appid="+businessConfig.APPID
+	                + "&redirect_uri="+URLEncoder.encode(backUrl,"utf-8")
+	                + "&response_type=code"
+	                + "&scope=snsapi_userinfo"
+	                + "&state=STATE#wechat_redirect";
+
+	        logger.info("forward重定向地址："+url);
+	        return "redirect:"+url;//必须重定向，否则不能成功snsapi_userinfo
+	    }
+	/**
+	 * 公众号微信登录授权回调函数
+	 * @param modelMap
+	 * @param req
+	 * @param resp
+	 * @return
+	 * @throws ServletException
+	 * @throws IOException
+	 * @parameter
+	 */
+	    @RequestMapping(value = "/callBack",  method = {RequestMethod.POST,RequestMethod.GET})
+	    public String callBack(ModelMap modelMap,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+	        /*
+	         * start 获取微信用户基本信息
+	         */
+	        String code =req.getParameter("code");
+	        logger.info("code"+code);
+	      //第二步：通过code换取网页授权access_token
+	         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+businessConfig.APPID
+	                + "&secret="+businessConfig.APPSECRET
+	                + "&code="+code
+	                + "&grant_type=authorization_code";
+
+	         logger.info("url:"+url);
+	        JSONObject jsonObject = WXAuthUtil.doGetJson(url);
+	        String openid = jsonObject.getString("openid");
+	        Boolean isused=false;
+	        logger.info("openid:"+openid);
+	        if(openid!=null){
+	         isused=stringRedisTemplate.opsForSet().isMember("openidset",openid);
+	        }
+	        logger.info("isused:"+isused);
+	        if(isused){
+	          logger.info("已关注用户");
+	          WeixinUserInfo weixinUserInfo=userService.findUserInfoByOpenID(openid);
+	          String redirecturl=businessConfig.DOMAIN_URL+"/personCenter.html?user_id=";
+	          logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+	          resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+	          return null;
+	        }
+	        String access_token = jsonObject.getString("access_token");
+	        String refresh_token = jsonObject.getString("refresh_token");
+	        //第五步验证access_token是否失效；展示都不需要
+	        String chickUrl="https://api.weixin.qq.com/sns/auth?access_token="+access_token+"&openid="+openid;
+
+	        JSONObject chickuserInfo = WXAuthUtil.doGetJson(chickUrl);
+	        logger.info(chickuserInfo.toString());
+	        if(!"0".equals(chickuserInfo.getString("errcode"))){
+	            // 第三步：刷新access_token（如果需要）-----暂时没有使用,参考文档https://mp.weixin.qq.com/wiki，
+	            String refreshTokenUrl="https://api.weixin.qq.com/sns/oauth2/refresh_token?appid="+openid+"&grant_type=refresh_token&refresh_token="+refresh_token;
+
+	            JSONObject refreshInfo = WXAuthUtil.doGetJson(refreshTokenUrl);
+	            System.out.println(refreshInfo.toString());
+	            access_token=refreshInfo.getString("access_token");
+	        }
+	       // 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+	       String infoUrl = "https://api.weixin.qq.com/sns/userinfo?access_token="+access_token
+	                + "&openid="+openid
+	                + "&lang=zh_CN";
+	        logger.info("infoUrl:"+infoUrl);
+	        /*openid存入缓存*/
+	        if(openid!=null){
+		        stringRedisTemplate.opsForSet().add("openidset",openid);
+		        }
+	        
+	        JSONObject userInfo = WXAuthUtil.doGetJson(infoUrl);
+	        userInfo.put("channel", "");
+	        WeixinUserInfo weixinUserInfo =userService.saveOrUpdateUserInfo(userInfo);
+	        modelMap.addAttribute("weixinUserInfo", weixinUserInfo);
+	        logger.info("modelMap"+modelMap);
+	        String redirecturl=businessConfig.DOMAIN_URL+"/personCenter.html?user_id=";
+	        logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+	        resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+	        return null;
+	    }
+	    
+	    
+	    
+
+		/**
+		 * 公众号微信登录授权(首页)
+		 * @param request
+		 * @param response
+		 * @return
+		 * @throws ParseException
+		 * @throws UnsupportedEncodingException 
+		 * @parameter
+		 */
+		    @RequestMapping(value = "/wxl_main", method = {RequestMethod.POST,RequestMethod.GET})
+		    public String wxl_main(HttpServletRequest request,
+		            HttpServletResponse response)
+		            throws ParseException, UnsupportedEncodingException {
+		    	    logger.info("公众号微信登录授权");
+		    	    String backUrl=businessConfig.DOMAIN_URL+"/wx/wxl_main_back";
+		        //这个url的域名必须要进行再公众号中进行注册验证，这个地址是成功后的回调地址snsapi_base
+		        logger.info("backUrl："+backUrl);
+		        // 第一步：用户同意授权，获取code
+		        String url ="https://open.weixin.qq.com/connect/oauth2/authorize?appid="+businessConfig.APPID
+		                + "&redirect_uri="+URLEncoder.encode(backUrl,"utf-8")
+		                + "&response_type=code"
+		                + "&scope=snsapi_userinfo"
+		                + "&state=STATE#wechat_redirect";
+
+		        logger.info("forward重定向地址："+url);
+		        return "redirect:"+url;//必须重定向，否则不能成功snsapi_userinfo
+		    }
+		/**
+		 * 公众号微信登录授权回调函数
+		 * @param modelMap
+		 * @param req
+		 * @param resp
+		 * @return
+		 * @throws ServletException
+		 * @throws IOException
+		 * @parameter
+		 */
+		    @RequestMapping(value = "/wxl_main_back",  method = {RequestMethod.POST,RequestMethod.GET})
+		    public String wxl_main_back(ModelMap modelMap,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		        /*
+		         * start 获取微信用户基本信息
+		         */
+		        String code =req.getParameter("code");
+		        logger.info("code"+code);
+		      //第二步：通过code换取网页授权access_token
+		         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+businessConfig.APPID
+		                + "&secret="+businessConfig.APPSECRET
+		                + "&code="+code
+		                + "&grant_type=authorization_code";
+
+		         logger.info("url:"+url);
+		        JSONObject jsonObject = WXAuthUtil.doGetJson(url);
+		        String openid = jsonObject.getString("openid");
+		         
+		        Boolean isused=false;
+		        logger.info("openid:"+openid);
+		        if(openid!=null){
+		         isused=stringRedisTemplate.opsForSet().isMember("openidset",openid);
+		        }
+		        logger.info("isused:"+isused);
+		        if(isused){
+		          logger.info("已关注用户");
+		          WeixinUserInfo weixinUserInfo=userService.findUserInfoByOpenID(openid);
+		          String redirecturl=businessConfig.DOMAIN_URL+"/home.html?user_id=";
+		          logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+		          resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+		          return null;
+		        }
+		        
+		        String access_token = jsonObject.getString("access_token");
+		        String refresh_token = jsonObject.getString("refresh_token");
+		        //第五步验证access_token是否失效；展示都不需要
+		        String chickUrl="https://api.weixin.qq.com/sns/auth?access_token="+access_token+"&openid="+openid;
+
+		        JSONObject chickuserInfo = WXAuthUtil.doGetJson(chickUrl);
+		        logger.info(chickuserInfo.toString());
+		        if(!"0".equals(chickuserInfo.getString("errcode"))){
+		            // 第三步：刷新access_token（如果需要）-----暂时没有使用,参考文档https://mp.weixin.qq.com/wiki，
+		            String refreshTokenUrl="https://api.weixin.qq.com/sns/oauth2/refresh_token?appid="+openid+"&grant_type=refresh_token&refresh_token="+refresh_token;
+
+		            JSONObject refreshInfo = WXAuthUtil.doGetJson(refreshTokenUrl);
+		            System.out.println(refreshInfo.toString());
+		            access_token=refreshInfo.getString("access_token");
+		        }
+		       // 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+		       String infoUrl = "https://api.weixin.qq.com/sns/userinfo?access_token="+access_token
+		                + "&openid="+openid
+		                + "&lang=zh_CN";
+		        logger.info("infoUrl:"+infoUrl);
+		        /*openid存入缓存*/
+		        if(openid!=null){
+			        stringRedisTemplate.opsForSet().add("openidset",openid);
+			        }
+		        
+		        JSONObject userInfo = WXAuthUtil.doGetJson(infoUrl);
+		        userInfo.put("channel", "");
+		        WeixinUserInfo weixinUserInfo =userService.saveOrUpdateUserInfo(userInfo);
+		        modelMap.addAttribute("weixinUserInfo", weixinUserInfo);
+		        logger.info("modelMap"+modelMap);
+		        String redirecturl=businessConfig.DOMAIN_URL+"/home.html?user_id=";
+		        logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+		        resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+		        return null;
+		    }
+		    
+		    
+			/**
+			 * 公众号微信登录授权(我要充值)
+			 * @param request
+			 * @param response
+			 * @return
+			 * @throws ParseException
+			 * @throws UnsupportedEncodingException 
+			 * @parameter
+			 */
+			    @RequestMapping(value = "/wxl_recharge", method = {RequestMethod.POST,RequestMethod.GET})
+			    public String wxl_recharge(HttpServletRequest request,
+			            HttpServletResponse response)
+			            throws ParseException, UnsupportedEncodingException {
+			    	    logger.info("公众号微信登录授权");
+			    	    String backUrl=businessConfig.DOMAIN_URL+"/wx/wxl_recharge_back";
+			        //这个url的域名必须要进行再公众号中进行注册验证，这个地址是成功后的回调地址snsapi_base
+			        logger.info("backUrl："+backUrl);
+			        // 第一步：用户同意授权，获取code
+			        String url ="https://open.weixin.qq.com/connect/oauth2/authorize?appid="+businessConfig.APPID
+			                + "&redirect_uri="+URLEncoder.encode(backUrl,"utf-8")
+			                + "&response_type=code"
+			                + "&scope=snsapi_userinfo"
+			                + "&state=STATE#wechat_redirect";
+
+			        logger.info("forward重定向地址："+url);
+			        return "redirect:"+url;//必须重定向，否则不能成功snsapi_userinfo
+			    }
+			/**
+			 * 公众号微信登录授权回调函数
+			 * @param modelMap
+			 * @param req
+			 * @param resp
+			 * @return
+			 * @throws ServletException
+			 * @throws IOException
+			 * @parameter
+			 */
+			    @RequestMapping(value = "/wxl_recharge_back",  method = {RequestMethod.POST,RequestMethod.GET})
+			    public String wxl_pay_back(ModelMap modelMap,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+			        /*
+			         * start 获取微信用户基本信息
+			         */
+			        String code =req.getParameter("code");
+			        logger.info("code"+code);
+			      //第二步：通过code换取网页授权access_token
+			         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+businessConfig.APPID
+			                + "&secret="+businessConfig.APPSECRET
+			                + "&code="+code
+			                + "&grant_type=authorization_code";
+
+			         logger.info("url:"+url);
+			        JSONObject jsonObject = WXAuthUtil.doGetJson(url);
+			        String openid = jsonObject.getString("openid");
+			         
+			        Boolean isused=false;
+			        logger.info("openid:"+openid);
+			        if(openid!=null){
+			         isused=stringRedisTemplate.opsForSet().isMember("openidset",openid);
+			        }
+			        logger.info("isused:"+isused);
+			        if(isused){
+			          logger.info("已关注用户");
+			          WeixinUserInfo weixinUserInfo=userService.findUserInfoByOpenID(openid);
+			          String redirecturl=businessConfig.DOMAIN_URL+"/recharge.html?user_id=";
+			          logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+			          resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+			          return null;
+			        }
+		           
+			        String access_token = jsonObject.getString("access_token");
+			        String refresh_token = jsonObject.getString("refresh_token");
+			        //第五步验证access_token是否失效；展示都不需要
+			        String chickUrl="https://api.weixin.qq.com/sns/auth?access_token="+access_token+"&openid="+openid;
+
+			        JSONObject chickuserInfo = WXAuthUtil.doGetJson(chickUrl);
+			        logger.info(chickuserInfo.toString());
+			        if(!"0".equals(chickuserInfo.getString("errcode"))){
+			            // 第三步：刷新access_token（如果需要）-----暂时没有使用,参考文档https://mp.weixin.qq.com/wiki，
+			            String refreshTokenUrl="https://api.weixin.qq.com/sns/oauth2/refresh_token?appid="+openid+"&grant_type=refresh_token&refresh_token="+refresh_token;
+
+			            JSONObject refreshInfo = WXAuthUtil.doGetJson(refreshTokenUrl);
+			            System.out.println(refreshInfo.toString());
+			            access_token=refreshInfo.getString("access_token");
+			        }
+			       // 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+			       String infoUrl = "https://api.weixin.qq.com/sns/userinfo?access_token="+access_token
+			                + "&openid="+openid
+			                + "&lang=zh_CN";
+			        logger.info("infoUrl:"+infoUrl);
+			        /*openid存入缓存*/
+			        if(openid!=null){
+				        stringRedisTemplate.opsForSet().add("openidset",openid);
+				        }
+			        JSONObject userInfo = WXAuthUtil.doGetJson(infoUrl);
+			        userInfo.put("channel", "");
+			        WeixinUserInfo weixinUserInfo =userService.saveOrUpdateUserInfo(userInfo);
+			        modelMap.addAttribute("weixinUserInfo", weixinUserInfo);
+			        logger.info("modelMap"+modelMap);
+			        String redirecturl=businessConfig.DOMAIN_URL+"/recharge.html?user_id=";
+			        logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+			        resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+			        return null;
+			    }
+			    
+			    /**
+				 * 公众号微信登录授权(我的书库)
+				 * @param request
+				 * @param response
+				 * @return
+				 * @throws ParseException
+				 * @throws UnsupportedEncodingException 
+				 * @parameter
+				 */
+				    @RequestMapping(value = "/wxl_book", method = {RequestMethod.POST,RequestMethod.GET})
+				    public String wxl_book_store(HttpServletRequest request,
+				            HttpServletResponse response)
+				            throws ParseException, UnsupportedEncodingException {
+				    	    logger.info("公众号微信登录授权");
+				    	    String backUrl=businessConfig.DOMAIN_URL+"/wx/wxl_store_back";
+				        //这个url的域名必须要进行再公众号中进行注册验证，这个地址是成功后的回调地址snsapi_base
+				        logger.info("backUrl："+backUrl);
+				        // 第一步：用户同意授权，获取code
+				        String url ="https://open.weixin.qq.com/connect/oauth2/authorize?appid="+businessConfig.APPID
+				                + "&redirect_uri="+URLEncoder.encode(backUrl,"utf-8")
+				                + "&response_type=code"
+				                + "&scope=snsapi_userinfo"
+				                + "&state=STATE#wechat_redirect";
+
+				        logger.info("forward重定向地址："+url);
+				        return "redirect:"+url;//必须重定向，否则不能成功snsapi_userinfo
+				    }
+				/**
+				 * 公众号微信登录授权回调函数
+				 * @param modelMap
+				 * @param req
+				 * @param resp
+				 * @return
+				 * @throws ServletException
+				 * @throws IOException
+				 * @parameter
+				 */
+				    @RequestMapping(value = "/wxl_store_back",  method = {RequestMethod.POST,RequestMethod.GET})
+				    public String wxl_store_back(ModelMap modelMap,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+				        /*
+				         * start 获取微信用户基本信息
+				         */
+				        String code =req.getParameter("code");
+				        logger.info("code"+code);
+				      //第二步：通过code换取网页授权access_token
+				         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+businessConfig.APPID
+				                + "&secret="+businessConfig.APPSECRET
+				                + "&code="+code
+				                + "&grant_type=authorization_code";
+
+				         logger.info("url:"+url);
+				        JSONObject jsonObject = WXAuthUtil.doGetJson(url);
+				        String openid = jsonObject.getString("openid");
+				         
+				        Boolean isused=false;
+				        logger.info("openid:"+openid);
+				        if(openid!=null){
+				         isused=stringRedisTemplate.opsForSet().isMember("openidset",openid);
+				        }
+				        logger.info("isused:"+isused);
+				        if(isused){
+				          logger.info("已关注用户");
+				          WeixinUserInfo weixinUserInfo=userService.findUserInfoByOpenID(openid);
+				          String redirecturl=businessConfig.DOMAIN_URL+"/mybookrack.html?user_id=";
+				          logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+				          resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+				          return null;
+				        }
+				        String access_token = jsonObject.getString("access_token");
+				        String refresh_token = jsonObject.getString("refresh_token");
+				        //第五步验证access_token是否失效；展示都不需要
+				        String chickUrl="https://api.weixin.qq.com/sns/auth?access_token="+access_token+"&openid="+openid;
+
+				        JSONObject chickuserInfo = WXAuthUtil.doGetJson(chickUrl);
+				        logger.info(chickuserInfo.toString());
+				        if(!"0".equals(chickuserInfo.getString("errcode"))){
+				            // 第三步：刷新access_token（如果需要）-----暂时没有使用,参考文档https://mp.weixin.qq.com/wiki，
+				            String refreshTokenUrl="https://api.weixin.qq.com/sns/oauth2/refresh_token?appid="+openid+"&grant_type=refresh_token&refresh_token="+refresh_token;
+
+				            JSONObject refreshInfo = WXAuthUtil.doGetJson(refreshTokenUrl);
+				            System.out.println(refreshInfo.toString());
+				            access_token=refreshInfo.getString("access_token");
+				        }
+				       // 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+				       String infoUrl = "https://api.weixin.qq.com/sns/userinfo?access_token="+access_token
+				                + "&openid="+openid
+				                + "&lang=zh_CN";
+				        logger.info("infoUrl:"+infoUrl);
+				        /*openid存入缓存*/
+				        if(openid!=null){
+					        stringRedisTemplate.opsForSet().add("openidset",openid);
+					        }
+				        JSONObject userInfo = WXAuthUtil.doGetJson(infoUrl);
+				        userInfo.put("channel", "");
+				        WeixinUserInfo weixinUserInfo =userService.saveOrUpdateUserInfo(userInfo);
+				        modelMap.addAttribute("weixinUserInfo", weixinUserInfo);
+				        logger.info("modelMap"+modelMap);
+				        String redirecturl=businessConfig.DOMAIN_URL+"/mybookrack.html?user_id=";
+				        logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+				        resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+				        return null;
+				    }
+				    
+				    
+				    /**
+					 * 公众号微信登录授权(书库)
+					 * @param request
+					 * @param response
+					 * @return
+					 * @throws ParseException
+					 * @throws UnsupportedEncodingException 
+					 * @parameter
+					 */
+					    @RequestMapping(value = "/wxl_stack", method = {RequestMethod.POST,RequestMethod.GET})
+					    public String wxl_stack(HttpServletRequest request,
+					            HttpServletResponse response)
+					            throws ParseException, UnsupportedEncodingException {
+					    	    logger.info("公众号微信登录授权");
+					    	    String backUrl=businessConfig.DOMAIN_URL+"/wx/wxl_stack_back";
+					        //这个url的域名必须要进行再公众号中进行注册验证，这个地址是成功后的回调地址snsapi_base
+					        logger.info("backUrl："+backUrl);
+					        // 第一步：用户同意授权，获取code
+					        String url ="https://open.weixin.qq.com/connect/oauth2/authorize?appid="+businessConfig.APPID
+					                + "&redirect_uri="+URLEncoder.encode(backUrl,"utf-8")
+					                + "&response_type=code"
+					                + "&scope=snsapi_userinfo"
+					                + "&state=STATE#wechat_redirect";
+
+					        logger.info("forward重定向地址："+url);
+					        return "redirect:"+url;//必须重定向，否则不能成功snsapi_userinfo
+					    }
+					/**
+					 * 公众号微信登录授权回调函数
+					 * @param modelMap
+					 * @param req
+					 * @param resp
+					 * @return
+					 * @throws ServletException
+					 * @throws IOException
+					 * @parameter
+					 */
+					    @RequestMapping(value = "/wxl_stack_back",  method = {RequestMethod.POST,RequestMethod.GET})
+					    public String wxl_stack_back(ModelMap modelMap,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+					        /*
+					         * start 获取微信用户基本信息
+					         */
+					        String code =req.getParameter("code");
+					        logger.info("code"+code);
+					      //第二步：通过code换取网页授权access_token
+					         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+businessConfig.APPID
+					                + "&secret="+businessConfig.APPSECRET
+					                + "&code="+code
+					                + "&grant_type=authorization_code";
+
+					         logger.info("url:"+url);
+					        JSONObject jsonObject = WXAuthUtil.doGetJson(url);
+					        String openid = jsonObject.getString("openid");
+					         
+					        Boolean isused=false;
+					        logger.info("openid:"+openid);
+					        if(openid!=null){
+					         isused=stringRedisTemplate.opsForSet().isMember("openidset",openid);
+					        }
+					        logger.info("isused:"+isused);
+					        if(isused){
+					          logger.info("已关注用户");
+					          WeixinUserInfo weixinUserInfo=userService.findUserInfoByOpenID(openid);
+					          String redirecturl=businessConfig.DOMAIN_URL+"/stack.html?user_id=";
+					          logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+					          resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+					          return null;
+					        }
+					        
+					        String access_token = jsonObject.getString("access_token");
+					        String refresh_token = jsonObject.getString("refresh_token");
+					        //第五步验证access_token是否失效；展示都不需要
+					        String chickUrl="https://api.weixin.qq.com/sns/auth?access_token="+access_token+"&openid="+openid;
+
+					        JSONObject chickuserInfo = WXAuthUtil.doGetJson(chickUrl);
+					        logger.info(chickuserInfo.toString());
+					        if(!"0".equals(chickuserInfo.getString("errcode"))){
+					            // 第三步：刷新access_token（如果需要）-----暂时没有使用,参考文档https://mp.weixin.qq.com/wiki，
+					            String refreshTokenUrl="https://api.weixin.qq.com/sns/oauth2/refresh_token?appid="+openid+"&grant_type=refresh_token&refresh_token="+refresh_token;
+
+					            JSONObject refreshInfo = WXAuthUtil.doGetJson(refreshTokenUrl);
+					            System.out.println(refreshInfo.toString());
+					            access_token=refreshInfo.getString("access_token");
+					        }
+					       // 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+					       String infoUrl = "https://api.weixin.qq.com/sns/userinfo?access_token="+access_token
+					                + "&openid="+openid
+					                + "&lang=zh_CN";
+					        logger.info("infoUrl:"+infoUrl);
+					        /*openid存入缓存*/
+					        if(openid!=null){
+						        stringRedisTemplate.opsForSet().add("openidset",openid);
+						        }
+					        JSONObject userInfo = WXAuthUtil.doGetJson(infoUrl);
+					        userInfo.put("channel", "");
+					        WeixinUserInfo weixinUserInfo =userService.saveOrUpdateUserInfo(userInfo);
+					        modelMap.addAttribute("weixinUserInfo", weixinUserInfo);
+					        logger.info("modelMap"+modelMap);
+					        String redirecturl=businessConfig.DOMAIN_URL+"/stack.html?user_id=";
+					        logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+					        resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+					        return null;
+					    }
+					    
+					    
+					    /**
+						 * 公众号微信登录授权(阅读记录)
+						 * @param request
+						 * @param response
+						 * @return
+						 * @throws ParseException
+						 * @throws UnsupportedEncodingException 
+						 * @parameter
+						 */
+						    @RequestMapping(value = "/wxl_recently", method = {RequestMethod.POST,RequestMethod.GET})
+						    public String wxl_recently(HttpServletRequest request,
+						            HttpServletResponse response)
+						            throws ParseException, UnsupportedEncodingException {
+						    	    logger.info("公众号微信登录授权");
+						    	    String backUrl=businessConfig.DOMAIN_URL+"/wx/wxl_recently_back";
+						        //这个url的域名必须要进行再公众号中进行注册验证，这个地址是成功后的回调地址snsapi_base
+						        logger.info("backUrl："+backUrl);
+						        // 第一步：用户同意授权，获取code
+						        String url ="https://open.weixin.qq.com/connect/oauth2/authorize?appid="+businessConfig.APPID
+						                + "&redirect_uri="+URLEncoder.encode(backUrl,"utf-8")
+						                + "&response_type=code"
+						                + "&scope=snsapi_userinfo"
+						                + "&state=STATE#wechat_redirect";
+
+						        logger.info("forward重定向地址："+url);
+						        return "redirect:"+url;//必须重定向，否则不能成功snsapi_userinfo
+						    }
+						/**
+						 * 公众号微信登录授权回调函数
+						 * @param modelMap
+						 * @param req
+						 * @param resp
+						 * @return
+						 * @throws ServletException
+						 * @throws IOException
+						 * @parameter
+						 */
+						    @RequestMapping(value = "/wxl_recently_back",  method = {RequestMethod.POST,RequestMethod.GET})
+						    public String wxl_recently_back(ModelMap modelMap,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+						        /*
+						         * start 获取微信用户基本信息
+						         */
+						        String code =req.getParameter("code");
+						        logger.info("code"+code);
+						      //第二步：通过code换取网页授权access_token
+						         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+businessConfig.APPID
+						                + "&secret="+businessConfig.APPSECRET
+						                + "&code="+code
+						                + "&grant_type=authorization_code";
+
+						         logger.info("url:"+url);
+						        JSONObject jsonObject = WXAuthUtil.doGetJson(url);
+						        String openid = jsonObject.getString("openid");
+						         
+						        Boolean isused=false;
+						        logger.info("openid:"+openid);
+						        if(openid!=null){
+						         isused=stringRedisTemplate.opsForSet().isMember("openidset",openid);
+						        }
+						        logger.info("isused:"+isused);
+						        if(isused){
+						          logger.info("已关注用户");
+						          WeixinUserInfo weixinUserInfo=userService.findUserInfoByOpenID(openid);
+						          String redirecturl=businessConfig.DOMAIN_URL+"/recentlyRead.html?user_id=";
+						          logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+						          resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+						          return null;
+						        }
+					           
+						        
+						        String access_token = jsonObject.getString("access_token");
+						        String refresh_token = jsonObject.getString("refresh_token");
+						        //第五步验证access_token是否失效；展示都不需要
+						        String chickUrl="https://api.weixin.qq.com/sns/auth?access_token="+access_token+"&openid="+openid;
+
+						        JSONObject chickuserInfo = WXAuthUtil.doGetJson(chickUrl);
+						        logger.info(chickuserInfo.toString());
+						        if(!"0".equals(chickuserInfo.getString("errcode"))){
+						            // 第三步：刷新access_token（如果需要）-----暂时没有使用,参考文档https://mp.weixin.qq.com/wiki，
+						            String refreshTokenUrl="https://api.weixin.qq.com/sns/oauth2/refresh_token?appid="+openid+"&grant_type=refresh_token&refresh_token="+refresh_token;
+
+						            JSONObject refreshInfo = WXAuthUtil.doGetJson(refreshTokenUrl);
+						            System.out.println(refreshInfo.toString());
+						            access_token=refreshInfo.getString("access_token");
+						        }
+						       // 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+						       String infoUrl = "https://api.weixin.qq.com/sns/userinfo?access_token="+access_token
+						                + "&openid="+openid
+						                + "&lang=zh_CN";
+						        logger.info("infoUrl:"+infoUrl);
+						        /*openid存入缓存*/
+						        if(openid!=null){
+							        stringRedisTemplate.opsForSet().add("openidset",openid);
+							        }
+						        
+						        JSONObject userInfo = WXAuthUtil.doGetJson(infoUrl);
+						        userInfo.put("channel", "");
+						        WeixinUserInfo weixinUserInfo =userService.saveOrUpdateUserInfo(userInfo);
+						        modelMap.addAttribute("weixinUserInfo", weixinUserInfo);
+						        logger.info("modelMap"+modelMap);
+						        String redirecturl=businessConfig.DOMAIN_URL+"/recentlyRead.html?user_id=";
+						        logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+						        resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+						        return null;
+						    }
+						    
+						    
+
+							/**
+							 * 公众号微信登录授权(邀请关注)
+							 * @param request
+							 * @param response
+							 * @return
+							 * @throws ParseException
+							 * @throws UnsupportedEncodingException 
+							 * @parameter
+							 */
+							    @RequestMapping(value = "/wxl_campaign", method = {RequestMethod.POST,RequestMethod.GET})
+							    public String wxl_campaign(HttpServletRequest request,
+							            HttpServletResponse response)
+							            throws ParseException, UnsupportedEncodingException {
+							    	    logger.info("公众号微信登录授权");
+							    	    String backUrl=businessConfig.DOMAIN_URL+"/wx/wxl_campaign";
+							    	    String param=request.getParameter("mobilephone");
+							    	    logger.info("param："+param);
+							        //这个url的域名必须要进行再公众号中进行注册验证，这个地址是成功后的回调地址snsapi_base
+							        logger.info("backUrl："+backUrl);
+							        // 第一步：用户同意授权，获取code
+							        String url ="https://open.weixin.qq.com/connect/oauth2/authorize?appid="+businessConfig.APPID
+							                + "&redirect_uri="+URLEncoder.encode(backUrl,"utf-8")
+							                + "&response_type=code"
+							                + "&scope=snsapi_userinfo"
+							                + "&param="+param
+							                + "&state=STATE#wechat_redirect";
+
+							        logger.info("forward重定向地址："+url);
+							        return "redirect:"+url;//必须重定向，否则不能成功snsapi_userinfo
+							    }
+							/**
+							 * 公众号微信登录授权回调函数
+							 * @param modelMap
+							 * @param req
+							 * @param resp
+							 * @return
+							 * @throws ServletException
+							 * @throws IOException
+							 * @parameter
+							 */
+							    @RequestMapping(value = "/wxl_campaign_back",  method = {RequestMethod.POST,RequestMethod.GET})
+							    public String wxl_campaign_back(ModelMap modelMap,HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+							        /*
+							         * start 获取微信用户基本信息
+							         */
+							        String code =req.getParameter("code");
+							        String param =req.getParameter("param");
+							        logger.info("code"+code);
+							        logger.info("param"+param);
+							      //第二步：通过code换取网页授权access_token
+							         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+businessConfig.APPID
+							                + "&secret="+businessConfig.APPSECRET
+							                + "&code="+code
+							                + "&grant_type=authorization_code";
+
+							         logger.info("url:"+url);
+							        JSONObject jsonObject = WXAuthUtil.doGetJson(url);
+							        String openid = jsonObject.getString("openid");
+							         
+							        Boolean isused=false;
+							        logger.info("openid:"+openid);
+							        if(openid!=null){
+							         isused=stringRedisTemplate.opsForSet().isMember("openidset",openid);
+							        }
+							        logger.info("isused:"+isused);
+							        if(isused){
+							          logger.info("已关注用户");
+							          WeixinUserInfo weixinUserInfo=userService.findUserInfoByOpenID(openid);
+							          String redirecturl=businessConfig.DOMAIN_URL+"/home.html?user_id=";
+							          logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+							          resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+							          return null;
+							        }
+							        
+							        String access_token = jsonObject.getString("access_token");
+							        String refresh_token = jsonObject.getString("refresh_token");
+							        //第五步验证access_token是否失效；展示都不需要
+							        String chickUrl="https://api.weixin.qq.com/sns/auth?access_token="+access_token+"&openid="+openid;
+
+							        JSONObject chickuserInfo = WXAuthUtil.doGetJson(chickUrl);
+							        logger.info(chickuserInfo.toString());
+							        if(!"0".equals(chickuserInfo.getString("errcode"))){
+							            // 第三步：刷新access_token（如果需要）-----暂时没有使用,参考文档https://mp.weixin.qq.com/wiki，
+							            String refreshTokenUrl="https://api.weixin.qq.com/sns/oauth2/refresh_token?appid="+openid+"&grant_type=refresh_token&refresh_token="+refresh_token;
+
+							            JSONObject refreshInfo = WXAuthUtil.doGetJson(refreshTokenUrl);
+							            System.out.println(refreshInfo.toString());
+							            access_token=refreshInfo.getString("access_token");
+							        }
+							       // 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+							       String infoUrl = "https://api.weixin.qq.com/sns/userinfo?access_token="+access_token
+							                + "&openid="+openid
+							                + "&lang=zh_CN";
+							        logger.info("infoUrl:"+infoUrl);
+							        /*openid存入缓存*/
+							        if(openid!=null){
+								        stringRedisTemplate.opsForSet().add("openidset",openid);
+								        }
+							        
+							        JSONObject userInfo = WXAuthUtil.doGetJson(infoUrl);
+							        userInfo.put("channel", param);
+							        WeixinUserInfo weixinUserInfo =userService.saveOrUpdateUserInfo(userInfo);
+							        modelMap.addAttribute("weixinUserInfo", weixinUserInfo);
+							        logger.info("modelMap"+modelMap);
+							        String redirecturl=businessConfig.DOMAIN_URL+"/home.html?user_id=";
+							        logger.info("redirecturl："+redirecturl+weixinUserInfo.getId());
+							        resp.sendRedirect(redirecturl+weixinUserInfo.getId());
+							        return null;
+							    }
+							    
+	}
+

@@ -1,0 +1,71 @@
+package com.novel.api.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.novel.api.entity.ExchangeDetail;
+import com.novel.api.entity.PlayTourDetail;
+import com.novel.api.entity.PlayTourGoods;
+import com.novel.api.pojo.PlayTourView;
+import com.novel.api.repository.ExchangeDetailRepository;
+import com.novel.api.repository.PlayTourDetailRepository;
+import com.novel.api.repository.PlayTourGoodsRepository;
+
+@Service
+public class CommonService {
+	@Autowired
+	ExchangeDetailRepository exchangeRep;
+	@Autowired
+	PlayTourGoodsRepository playTourGoodsRep;
+	@Autowired
+	PlayTourDetailRepository playTourDetailRep;
+
+	/**
+	 * 更新兑换书豆信息
+	 * 
+	 * @param eventDetail
+	 * @return
+	 */
+	public ExchangeDetail saveAndupdate(ExchangeDetail eventDetail) {
+		return exchangeRep.saveAndFlush(eventDetail);
+	}
+
+	/**
+	 * 兑换书豆记录查询
+	 * 
+	 * @param userid
+	 * @return
+	 */
+	public List<ExchangeDetail> findExchangeDetailByUserid(int userid) {
+		return exchangeRep.findExchangeDetailByUserid(userid);
+	}
+
+	/**
+	 * 更新打赏信息
+	 * 
+	 * @param entity
+	 * @return
+	 */
+	public PlayTourDetail saveAndupdate(PlayTourDetail entity) {
+		return playTourDetailRep.saveAndFlush(entity);
+	}
+
+	/**
+	 * 打赏礼物查询
+	 * 
+	 * @return
+	 */
+	public List<PlayTourGoods> findPlayTourGoods() {
+		return playTourGoodsRep.findAll();
+	}
+	/**
+	 * 小说打赏礼物列表
+	 * 
+	 * @return
+	 */
+	public	List<PlayTourView> findByPlayTourViewByNovelId(int novel_id) {
+		return playTourDetailRep.findByPlayTourViewByNovelId(novel_id);
+	}
+}

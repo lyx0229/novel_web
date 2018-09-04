@@ -1,0 +1,27 @@
+package com.novel.api.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.novel.api.entity.ExchangeDetail;
+import com.novel.api.repository.ExchangeDetailRepository;
+
+@Service
+public class CommonService {
+	@Autowired
+	ExchangeDetailRepository exchangeRep;
+	 /**
+     * 更新兑换书豆信息
+     * @param eventDetail
+     * @return
+     */
+	public ExchangeDetail saveAndupdate(ExchangeDetail eventDetail) {
+		return exchangeRep.saveAndFlush(eventDetail);
+	}
+	
+	public List<ExchangeDetail> findExchangeDetailByUserid(int userid) {
+		return exchangeRep.findExchangeDetailByUserid(userid);
+	}
+}

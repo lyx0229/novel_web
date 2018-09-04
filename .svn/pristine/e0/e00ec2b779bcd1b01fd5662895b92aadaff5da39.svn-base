@@ -1,0 +1,42 @@
+package com.novel.api.pojo;
+
+import javax.persistence.Entity;
+
+import com.novel.api.entity.PlayTourDetail;
+
+/**
+ * 打赏排行
+ * @author Administrator
+ *
+ */
+@Entity
+public class PlayTourListView extends PlayTourDetail{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -654365081236523246L;
+	private String nick_name;//昵称
+	private int bookpeas;//书豆统计
+	private String head_imgurl;//头像url
+	public String getNick_name() {
+		return nick_name;
+	}
+	public void setNick_name(String nick_name) {
+		this.nick_name = nick_name;
+	}
+	public int getBookpeas() {
+		return bookpeas;
+	}
+	public void setBookpeas(int bookpeas) {
+		this.bookpeas = bookpeas;
+	}
+	public String getHead_imgurl() {
+		return head_imgurl;
+	}
+	public void setHead_imgurl(String head_imgurl) {
+		this.head_imgurl = head_imgurl;
+	}
+	
+
+}

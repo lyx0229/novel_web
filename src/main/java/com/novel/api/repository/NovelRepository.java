@@ -1,0 +1,17 @@
+package com.novel.api.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.novel.api.entity.Novel;
+import com.novel.api.pojo.NovelView;
+
+public interface NovelRepository extends JpaSpecificationExecutor<Novel>,JpaRepository<Novel, Integer> {
+
+	@Query(value="select u.*,o.update_time from tbl_novel_store o  left join  tbl_novel u on  o.novel_id=u.id where o.user_id=?1", nativeQuery = true)
+	List<NovelView> findByNovelViewByUserid(@Param("user_id")int usreid);
+}

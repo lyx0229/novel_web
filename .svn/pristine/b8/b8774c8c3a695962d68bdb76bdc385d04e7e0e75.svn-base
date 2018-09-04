@@ -1,0 +1,63 @@
+package com.novel.api.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.novel.api.entity.CheckInfo;
+import com.novel.api.entity.JSONResponse;
+import com.novel.api.entity.User;
+import com.novel.api.entity.WeixinUserInfo;
+import com.novel.api.service.CheckInfoService;
+
+/**
+ * 小说记录
+ * 
+ * @author Administrator
+ *
+ */
+
+@RestController
+@RequestMapping("/novel")
+public class NovelController {
+	@Autowired
+	CheckInfoService checkInfoService;
+
+	/**
+	 * 书库
+	 * 
+	 * @return
+	 */
+	@RequestMapping(value = "/novel_detail", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse checkin(int userid) {
+		//判断当日是否已签到
+		CheckInfo checkInfo= checkInfoService.findByUserIDAndTime(userid);
+		if(checkInfo!=null){
+		return JSONResponse.success("当日已签到");
+		}
+		// 数据入库
+		WeixinUserInfo user = checkInfoService.checkin(userid);
+		return JSONResponse.success(user);
+	}
+	/**
+	 * 添加书到书库
+	 * 
+	 * @return
+	 */
+	@RequestMapping(value = "/novel_add", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse novel_add(int novel_id,int userid) {
+		//判断当日是否已签到
+		CheckInfo checkInfo= checkInfoService.findByUserIDAndTime(userid);
+		if(checkInfo!=null){
+			return JSONResponse.success("当日已签到");
+		}
+		// 数据入库
+		WeixinUserInfo user = checkInfoService.checkin(userid);
+		return JSONResponse.success(user);
+	}
+
+}

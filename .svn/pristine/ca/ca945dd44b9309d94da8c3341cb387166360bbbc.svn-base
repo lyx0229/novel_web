@@ -1,0 +1,135 @@
+package com.novel.api.entity;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * 用户信息
+ * 
+ * @author Administrator
+ *
+ */
+@Entity
+@Table(name = "tbl_user")
+public class User implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 7257456389765523308L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int id;// 用户ID
+	@Column
+	private String user_name;// 账户名称
+	@Column
+	private String wx_name;// 微信用户名
+	@Column
+	private String mobile;//手机号码
+	@Column
+	private String wxid;// 微信ID
+	@Column
+	private String password;// 用户密码
+	@Column
+	private int vip_status;// VIP会员状态(1 默认 非VIP 2)
+	@Column
+	private Date vip_time;// VIP创建时间
+	@Column
+	private int book_peas;// 书豆
+	@Column
+	private int read_points;// 阅读积分
+	@Column
+	private String head_img;// 头像
+	@Column
+	private Date create_time;// 帐号创建时间
+	@Column
+	private Date last_time;// 最后登陆时间
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getUser_name() {
+		return user_name;
+	}
+	public void setUser_name(String user_name) {
+		this.user_name = user_name;
+	}
+	public String getWx_name() {
+		return wx_name;
+	}
+	public void setWx_name(String wx_name) {
+		this.wx_name = wx_name;
+	}
+	public String getWxid() {
+		return wxid;
+	}
+	public void setWxid(String wxid) {
+		this.wxid = wxid;
+	}
+	
+	public String getMobile() {
+		return mobile;
+	}
+	public void setMobile(String mobile) {
+		this.mobile = mobile;
+	}
+	public Date getLast_time() {
+		return last_time;
+	}
+	public void setLast_time(Date last_time) {
+		this.last_time = last_time;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public int getVip_status() {
+		return vip_status;
+	}
+	public void setVip_status(int vip_status) {
+		this.vip_status = vip_status;
+	}
+	public Date getVip_time() {
+		return vip_time;
+	}
+	public void setVip_time(Date vip_time) {
+		this.vip_time = vip_time;
+	}
+	public int getBook_peas() {
+		return book_peas;
+	}
+	public void setBook_peas(int book_peas) {
+		this.book_peas = book_peas;
+	}
+	public int getRead_points() {
+		return read_points;
+	}
+	public void setRead_points(int read_points) {
+		this.read_points = read_points;
+	}
+	public String getHead_img() {
+		return head_img;
+	}
+	public void setHead_img(String head_img) {
+		this.head_img = head_img;
+	}
+	public Date getCreate_time() {
+		return create_time;
+	}
+	public void setCreate_time(Date create_time) {
+		this.create_time = create_time;
+	}
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+}

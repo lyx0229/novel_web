@@ -1,0 +1,125 @@
+package com.weixin.utils;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
+
+/**
+ *  xml解析成map对象
+ */
+public class XMLUtil {
+ 
+    /**
+     * 将微信服务器发送的Request请求中Body的XML解析为Map
+     *
+     * @param request
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, String> parseRequestXmlToMap(HttpServletRequest request) throws Exception {
+        // 解析结果存储在HashMap中
+        Map<String, String> resultMap;
+        InputStream inputStream = request.getInputStream();
+        resultMap = parseInputStreamToMap(inputStream);
+        return resultMap;
+    }
+ 
+    /**
+     * 将输入流中的XML解析为Map
+     *
+     * @param inputStream
+     * @return
+     * @throws DocumentException
+     * @throws IOException
+     */
+    public static Map<String, String> parseInputStreamToMap(InputStream inputStream) throws DocumentException, IOException {
+        // 解析结果存储在HashMap中
+        Map<String, String> map = new HashMap<String, String>();
+        // 读取输入流
+        SAXReader reader = new SAXReader();
+        Document document = reader.read(inputStream);
+        //得到xml根元素
+        Element root = document.getRootElement();
+        // 得到根元素的所有子节点
+        @SuppressWarnings("unchecked")
+		List<Element> elementList = root.elements();
+        //遍历所有子节点
+        for (Element e : elementList) {
+            map.put(e.getName(), e.getText());
+        }
+        //释放资源
+        inputStream.close();
+        return map;
+    }
+ 
+    /**
+     * 将String类型的XML解析为Map
+     *
+     * @param str
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, String> parseXmlStringToMap(String str) throws Exception {
+        Map<String, String> resultMap;
+        InputStream inputStream = new ByteArrayInputStream(str.getBytes("UTF-8"));
+        resultMap = parseInputStreamToMap(inputStream);
+        return resultMap;
+    }
+    /**
+     * 将Map转换为XML格式的字符串
+     *
+     * @param data Map类型数据
+     * @return XML格式的字符串
+     * @throws Exception
+     */
+    public static String GetMapToXML(Map<String, String> data) throws Exception {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder= documentBuilderFactory.newDocumentBuilder();
+        org.w3c.dom.Document document = documentBuilder.newDocument();
+        org.w3c.dom.Element root = document.createElement("xml");
+        document.appendChild(root);
+        for (String key: data.keySet()) {
+            String value = data.get(key);
+            if (value == null) {
+                value = "";
+            }
+            value = value.trim();
+            org.w3c.dom.Element filed = document.createElement(key);
+            filed.appendChild(document.createTextNode(value));
+            root.appendChild(filed);
+        }
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        DOMSource source = new DOMSource(document);
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        StringWriter writer = new StringWriter();
+        StreamResult result = new StreamResult(writer);
+        transformer.transform(source, result);
+        String output = writer.getBuffer().toString(); //.replaceAll("\n|\r", "");
+        try {
+            writer.close();
+        }
+        catch (Exception ex) {
+        }
+        return output;
+    }
+}

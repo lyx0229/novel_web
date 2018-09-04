@@ -1,0 +1,126 @@
+package com.novel.api.controller;
+
+import java.util.Date;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.alibaba.fastjson.JSONObject;
+import com.novel.api.entity.JSONResponse;
+import com.novel.api.entity.Novel;
+import com.novel.api.entity.NovelStore;
+import com.novel.api.entity.NoverDetail;
+import com.novel.api.pojo.NovelView;
+import com.novel.api.pojo.PlayTourListView;
+import com.novel.api.pojo.PlayTourView;
+import com.novel.api.service.CommonService;
+import com.novel.api.service.NovelService;
+
+/**
+ * 小说记录
+ * 
+ * @author Administrator
+ *
+ */
+
+@RestController
+@RequestMapping("/novel")
+public class NovelController {
+	Logger logger = LoggerFactory.getLogger(NovelController.class); 
+	@Autowired
+	NovelService novelService;
+	@Autowired
+	CommonService commonService;
+	
+	
+	/**
+	 * 小说首页
+	 * 
+	 * @return
+	 */
+	@RequestMapping(value = "/novel_main", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse novel_main(int userid,int novel_id) {
+		logger.info("进入小说首页");
+		logger.info("userid："+userid+"novel_id:"+novel_id);
+		JSONObject json= new JSONObject();
+		List<NoverDetail> detail_list=novelService.findByNovelDetailByNovelID(novel_id);//目录
+		if(detail_list==null ||detail_list.size()==0){
+			return JSONResponse.error("该小说无内容");
+		}
+		NovelView noverlview=novelService.findNovelViewByID(novel_id);//小说信息
+		NoverDetail detail=detail_list.get(detail_list.size()-1);
+		
+		json.put("userid", userid);//小说
+		json.put("noverl", noverlview);//小说
+		json.put("detail", detail);//最新章节
+		json.put("detail_list", detail_list);//目录
+		// 数据入库
+		return JSONResponse.success(json);
+	}
+	
+
+	/**
+	 * 查看书库
+	 * 
+	 * @return
+	 */
+	@RequestMapping(value = "/novel_store", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse novel_store(int userid) {
+		logger.info("进入查看书库");
+		logger.info("userid"+userid);
+		List<NovelView> view_list=novelService.findByNovelViewByUserid(userid);
+		// 数据入库
+		return JSONResponse.success(view_list);
+	}
+	/**
+	 * 添加书到书库
+	 * 
+	 * @return
+	 */
+	@RequestMapping(value = "/novel_store_add", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse novel_store_add(int novel_id,int userid) {
+		logger.info("进入添加小说到书库");
+		logger.info("novel_id"+novel_id+"userid"+userid);
+		NovelStore novelStore=new NovelStore();
+		novelStore.setBook_state(1);
+		novelStore.setNovel_id(novel_id);
+		novelStore.setUser_id(userid);
+		novelStore.setUpdate_time(new Date());
+		novelStore=novelService.saveAndUpdate(novelStore);
+		return JSONResponse.success(novelStore);
+	}
+	
+	 /**
+	   * 小说打赏记录
+	   */
+	@RequestMapping(value = "/paly_tour_detail", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse paly_tour_detail(int novel_id) {
+		logger.info("小说打赏记录");
+		List<PlayTourView> list=commonService.findByPlayTourViewByNovelId(novel_id); 
+		return JSONResponse.success(list);
+	}
+	
+
+	 /**
+	   * 小说打赏排行
+	   */
+	@RequestMapping(value = "/paly_tour_list", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse paly_tour_list(int novel_id) {
+		logger.info("小说打赏排行");
+		logger.info("novel_id="+novel_id);
+		List<PlayTourListView> list=commonService.findByPlayTourListViewByNovelId(novel_id); 
+		return JSONResponse.success(list);
+	}
+  
+}

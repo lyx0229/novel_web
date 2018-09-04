@@ -1,0 +1,9 @@
+package com.novel.api.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+import com.novel.api.entity.NovelStore;
+
+public interface NovelStoreRepository extends JpaSpecificationExecutor<NovelStore>,JpaRepository<NovelStore, Integer> {
+}

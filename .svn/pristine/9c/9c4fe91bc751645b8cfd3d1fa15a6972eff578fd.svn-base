@@ -1,0 +1,148 @@
+package com.novel.api.service;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.novel.api.entity.ChapterBuyInfo;
+import com.novel.api.entity.ExchangeDetail;
+import com.novel.api.entity.JSONResponse;
+import com.novel.api.entity.PlayTourDetail;
+import com.novel.api.entity.PlayTourGoods;
+import com.novel.api.entity.WeixinUserInfo;
+import com.novel.api.pojo.PlayTourListView;
+import com.novel.api.pojo.PlayTourView;
+import com.novel.api.repository.ChapterBuyRepository;
+import com.novel.api.repository.ExchangeDetailRepository;
+import com.novel.api.repository.PlayTourDetailRepository;
+import com.novel.api.repository.PlayTourGoodsRepository;
+import com.novel.config.BusinessConfig;
+
+@Service
+public class CommonService {
+	@Autowired
+	ExchangeDetailRepository exchangeRep;
+	@Autowired
+	PlayTourGoodsRepository playTourGoodsRep;
+	@Autowired
+	PlayTourDetailRepository playTourDetailRep;
+	@Autowired
+	UserService userService;
+	@Autowired
+	ChapterBuyRepository chapterBuyRep;
+	@Autowired
+	BusinessConfig businessConfig;
+	/**
+	 * 更新兑换书豆信息
+	 * 
+	 * @param eventDetail
+	 * @return
+	 */
+	public ExchangeDetail saveAndupdate(ExchangeDetail eventDetail) {
+		return exchangeRep.saveAndFlush(eventDetail);
+	}
+	/**
+	 * 购买章节
+	 * 
+	 * @param eventDetail
+	 * @return
+	 */
+	public ChapterBuyInfo saveAndupdate(ChapterBuyInfo chapterBuyInfo) {
+		return chapterBuyRep.saveAndFlush(chapterBuyInfo);
+	}
+
+	/**
+	 * 兑换书豆记录查询
+	 * 
+	 * @param userid
+	 * @return
+	 */
+	public List<ExchangeDetail> findExchangeDetailByUserid(int userid) {
+		return exchangeRep.findExchangeDetailByUserid(userid);
+	}
+
+	/**
+	 * 更新打赏信息
+	 * 
+	 * @param entity
+	 * @return
+	 */
+	@Transactional
+	public JSONResponse savePlayTour(int novel_id,int userid,int goods_id) {
+		WeixinUserInfo user=userService.findUserById(userid);
+		if(user==null){
+		 return	JSONResponse.error("用户未注册");
+		}
+		int book_peas=user.getBook_peas();//剩余书豆
+		PlayTourGoods goods=playTourGoodsRep.getOne(goods_id);
+		int bookpeas=goods.getBookpeas();//礼物价值书豆
+		if(book_peas<bookpeas){
+			return	JSONResponse.error("剩余书豆不足，请充值");
+		}
+		user.setBook_peas(book_peas-bookpeas);
+		userService.saveAndUpdate(user);
+		PlayTourDetail entity= new PlayTourDetail();
+		entity.setGoods_id(goods_id);
+		entity.setNovel_id(novel_id);
+		entity.setUser_id(userid);
+		entity.setUpdate_time(new Date());
+		playTourDetailRep.saveAndFlush(entity);
+		
+		return	JSONResponse.success(user);
+	}
+
+	/**
+	 * 打赏礼物查询
+	 * 
+	 * @return
+	 */
+	public List<PlayTourGoods> findPlayTourGoods() {
+		return playTourGoodsRep.findAll();
+	}
+	/**
+	 * 小说打赏礼物列表
+	 * 
+	 * @return
+	 */
+	public	List<PlayTourView> findByPlayTourViewByNovelId(int novel_id) {
+		return playTourDetailRep.findByPlayTourViewByNovelId(novel_id);
+	}
+	/**
+	 * 小说打赏礼物排行
+	 * 
+	 * @return
+	 */
+	public	List<PlayTourListView> findByPlayTourListViewByNovelId(int novel_id) {
+		return playTourDetailRep.findByPlayTourListViewByNovelId(novel_id);
+	}
+	
+	
+	/**
+	 * 章节购买更新信息
+	 * 
+	 * @param entity
+	 * @return
+	 */
+	@Transactional
+	public JSONResponse saveBuyChapter(int novel_detail_id,int userid) {
+		WeixinUserInfo user=userService.findUserById(userid);
+		if(user==null){
+		 return	JSONResponse.error("用户未注册");
+		}
+		int book_peas=user.getBook_peas();//剩余书豆
+		user.setBook_peas(book_peas-businessConfig.chapter_peas);
+		userService.saveAndUpdate(user);
+		ChapterBuyInfo entity= new ChapterBuyInfo();
+		entity.setNovel_detail_id(novel_detail_id);
+		entity.setUser_id(userid);
+		entity.setUpdate_time(new Date());
+		chapterBuyRep.saveAndFlush(entity);
+		
+		return	JSONResponse.success(user);
+	}
+
+}

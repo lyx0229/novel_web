@@ -1,0 +1,16 @@
+package com.novel.api.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.novel.api.entity.NoverDetail;
+
+public interface NovelDetailRepository extends JpaSpecificationExecutor<NoverDetail>,JpaRepository<NoverDetail, Integer> {
+
+	@Query(value="select u.* from tbl_novel_detail u where u.novel_id=?1 order by id asc", nativeQuery = true)
+	List<NoverDetail> findByNovelDetailByNovelID(@Param("novel_id")int novel_id);
+}

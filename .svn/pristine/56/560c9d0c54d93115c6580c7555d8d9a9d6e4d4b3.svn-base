@@ -1,0 +1,66 @@
+package com.novel.api.entity;
+
+import java.io.Serializable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.GenerationType;
+import java.util.Date;
+   /**
+    * 打赏明细
+    * Fri Jul 13 17:41:05 CST 2018 lyx
+    */ 
+ @Entity 
+ @Table(name = "tbl_play_tour_detail") 
+
+
+public class PlayTourDetail implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6720834152647384255L;
+	@Id 
+	@GeneratedValue(strategy = GenerationType.IDENTITY) 
+	private long id;
+	@Column 
+	private long novel_id;
+	@Column 
+	private long user_id;
+	@Column 
+	private long goods_id;
+	@Column 
+	private Date update_time;
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public long getNovel_id() {
+		return novel_id;
+	}
+	public void setNovel_id(long novel_id) {
+		this.novel_id = novel_id;
+	}
+	public long getUser_id() {
+		return user_id;
+	}
+	public void setUser_id(long user_id) {
+		this.user_id = user_id;
+	}
+	public long getGoods_id() {
+		return goods_id;
+	}
+	public void setGoods_id(long goods_id) {
+		this.goods_id = goods_id;
+	}
+	public Date getUpdate_time() {
+		return update_time;
+	}
+	public void setUpdate_time(Date update_time) {
+		this.update_time = update_time;
+	}
+}
+

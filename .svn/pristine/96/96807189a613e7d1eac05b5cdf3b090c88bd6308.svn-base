@@ -1,0 +1,16 @@
+#每天签到获取的书豆
+bookpeas=50
+#每章节购买所需书豆
+chapter_peas=30
+#MD5key
+KEY=novel_wx_pay
+###########################微信#################################
+#微信APPID
+APPID=wx3f8c0adc5e804579
+#微信APPSECRET
+APPSECRET=1a666812758d637a8b4cf2a5ff0e36c3
+#微信TOKEN
+TOKEN=novel
+#微信支付回调
+NOTIFY_URL=xs.ylnnt.com/wx_pay/payment_notice
+###############################################################

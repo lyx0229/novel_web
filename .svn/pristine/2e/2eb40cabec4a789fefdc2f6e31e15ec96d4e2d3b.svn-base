@@ -1,0 +1,118 @@
+package com.novel.api.service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.hibernate.SQLQuery;
+import org.hibernate.transform.Transformers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.novel.api.entity.Novel;
+import com.novel.api.entity.NovelStore;
+import com.novel.api.entity.NoverDetail;
+import com.novel.api.pojo.NovelView;
+import com.novel.api.repository.NovelDetailRepository;
+import com.novel.api.repository.NovelRepository;
+import com.novel.api.repository.NovelStoreRepository;
+
+@Service
+public class NovelService {
+	@Autowired
+	private NovelRepository novelRep;
+
+	@Autowired
+	private NovelStoreRepository novelStoreRepository;
+	@Autowired
+	private NovelDetailRepository novelDetailRep;
+
+	@Autowired
+	private EntityManager entityManager;
+
+	public NovelStore saveAndUpdate(NovelStore po) {
+		return novelStoreRepository.saveAndFlush(po);
+	}
+
+	public Novel findNovelByID(int id) {
+		return novelRep.findById(id).get();
+	}
+
+	@SuppressWarnings("deprecation")
+	public NovelView findNovelViewByID(int id) {
+		// 执行原生SQL
+		Query nativeQuery = entityManager
+				.createNativeQuery("select u.* from  tbl_novel u  where u.id=:id ");
+		nativeQuery.setParameter("id", id);
+		// 指定返回对象类型
+		nativeQuery.unwrap(SQLQuery.class).setResultTransformer(Transformers.aliasToBean(NovelView.class));
+		// 返回对象 List<T>
+		@SuppressWarnings("unchecked")
+		List<NovelView> list = nativeQuery.getResultList();
+		if (list.size() == 0) {
+			return null;
+		}
+		return list.get(0);
+	}
+
+	public List<Novel> findSearch(Novel model) {
+		List<Novel> resultList = null;
+		Specification<Novel> querySpecifi = new Specification<Novel>() {
+			@Override
+			public Predicate toPredicate(Root<Novel> root, CriteriaQuery<?> criteriaQuery,
+					CriteriaBuilder criteriaBuilder) {
+
+				List<Predicate> predicates = new ArrayList<>();
+				if (model.getSex_status() != 0) {
+					predicates.add(
+							criteriaBuilder.equal(root.get("sex_status").as(Integer.class), model.getSex_status()));
+				}
+				if (model.getType_status() != 0) {
+					predicates.add(
+							criteriaBuilder.equal(root.get("type_status").as(Integer.class), model.getType_status()));
+				}
+				if (model.getNovel_state() != 0) {
+					predicates.add(
+							criteriaBuilder.equal(root.get("novel_state").as(Integer.class), model.getNovel_state()));
+				}
+				return criteriaBuilder.and(predicates.toArray(new Predicate[predicates.size()]));
+			}
+		};
+		resultList = novelRep.findAll(querySpecifi);
+		return resultList;
+	}
+
+	public List<NovelView> findByNovelViewByUserid(int user_id) {
+		// 执行原生SQL
+		String sql = "select u.*,o.update_time from tbl_novel_store o  left join  tbl_novel u on  o.novel_id=u.id where o.user_id=:user_id";
+		Query nativeQuery = entityManager.createNativeQuery(sql);
+		nativeQuery.setParameter("user_id", user_id);
+		// 指定返回对象类型
+		nativeQuery.unwrap(SQLQuery.class).setResultTransformer(Transformers.aliasToBean(NovelView.class));
+		// 返回对象 List<T>
+		@SuppressWarnings("unchecked")
+		List<NovelView> list = nativeQuery.getResultList();
+		if (list.size() == 0) {
+			return null;
+		}
+		return list;
+	}
+
+	/**
+	 * 目录
+	 * 
+	 * @param novel_id
+	 * @return
+	 */
+	public List<NoverDetail> findByNovelDetailByNovelID(int novel_id) {
+		return novelDetailRep.findByNovelDetailByNovelID(novel_id);
+
+	}
+}

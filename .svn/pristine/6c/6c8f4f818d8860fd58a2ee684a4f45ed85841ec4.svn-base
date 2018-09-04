@@ -1,0 +1,142 @@
+package com.novel.api.pojo;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+
+import org.apache.tomcat.util.codec.binary.Base64;
+/**
+ * 打赏记录
+ * @author Administrator
+ *
+ */
+
+public class PlayTourView{
+	private int id;
+	private int user_id;
+	private int template_id;
+	private Date recharge_time;
+	private double recharge_money;
+	private int book_peas;
+	private int pre_book_peas;
+	private int result;
+	private String order_no;
+	private String remark;
+	private Date result_time;
+	private String result_info;
+	private String result_code;
+	private String description;
+	private String nick_name;
+	private String head_imgurl;
+	private String goods_name;
+	
+	
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public int getUser_id() {
+		return user_id;
+	}
+	public void setUser_id(int user_id) {
+		this.user_id = user_id;
+	}
+	public int getTemplate_id() {
+		return template_id;
+	}
+	public void setTemplate_id(int template_id) {
+		this.template_id = template_id;
+	}
+	public Date getRecharge_time() {
+		return recharge_time;
+	}
+	public void setRecharge_time(Date recharge_time) {
+		this.recharge_time = recharge_time;
+	}
+	public double getRecharge_money() {
+		return recharge_money;
+	}
+	public void setRecharge_money(double recharge_money) {
+		this.recharge_money = recharge_money;
+	}
+	public int getBook_peas() {
+		return book_peas;
+	}
+	public void setBook_peas(int book_peas) {
+		this.book_peas = book_peas;
+	}
+	public int getPre_book_peas() {
+		return pre_book_peas;
+	}
+	public void setPre_book_peas(int pre_book_peas) {
+		this.pre_book_peas = pre_book_peas;
+	}
+	public int getResult() {
+		return result;
+	}
+	public void setResult(int result) {
+		this.result = result;
+	}
+	public String getOrder_no() {
+		return order_no;
+	}
+	public void setOrder_no(String order_no) {
+		this.order_no = order_no;
+	}
+	public String getRemark() {
+		return remark;
+	}
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+	public Date getResult_time() {
+		return result_time;
+	}
+	public void setResult_time(Date result_time) {
+		this.result_time = result_time;
+	}
+	public String getResult_info() {
+		return result_info;
+	}
+	public void setResult_info(String result_info) {
+		this.result_info = result_info;
+	}
+	public String getResult_code() {
+		return result_code;
+	}
+	public void setResult_code(String result_code) {
+		this.result_code = result_code;
+	}
+	public String getDescription() {
+		return description;
+	}
+	public void setDescription(String description) {
+		this.description = description;
+	}
+	public String getHead_imgurl() {
+		return head_imgurl;
+	}
+	public void setHead_imgurl(String head_imgurl) {
+		this.head_imgurl = head_imgurl;
+	}
+	public String getNick_name() {
+		try {
+			nick_name = new String(Base64.decodeBase64(nick_name.getBytes()), "utf-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		return nick_name;
+	}
+	public void setNick_name(String nick_name) {
+		this.nick_name = nick_name;
+	}
+	public String getGoods_name() {
+		return goods_name;
+	}
+	public void setGoods_name(String goods_name) {
+		this.goods_name = goods_name;
+	}
+	
+	
+}

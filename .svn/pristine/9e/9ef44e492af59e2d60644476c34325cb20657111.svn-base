@@ -1,0 +1,135 @@
+package com.novel.api.controller;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.alibaba.fastjson.JSONObject;
+import com.novel.api.entity.ExchangeDetail;
+import com.novel.api.entity.JSONResponse;
+import com.novel.api.entity.WeixinUserInfo;
+import com.novel.api.service.CommonService;
+import com.novel.api.service.JCaptchaService;
+import com.novel.api.service.UserService;
+
+@RestController
+@RequestMapping("/user")
+public class UserController {
+	Logger logger = LoggerFactory.getLogger(UserController.class); 
+	@Autowired
+	UserService userService;
+	@Autowired
+	JCaptchaService jCaptchaService;
+	
+	@Autowired
+	CommonService commonService;
+	
+	
+	
+	/**
+	 * 兑换书豆接口
+	 */
+	
+	@RequestMapping(value = "/register", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse register(int userid) {
+		if(userid==0){
+			JSONResponse.error("未登陆");
+		}
+		WeixinUserInfo user=userService.findUserById(userid);
+		List<ExchangeDetail> exchange_list=commonService.findExchangeDetailByUserid(userid);
+		JSONObject json=new JSONObject();
+		json.put("user", user);
+		json.put("exchange_list", exchange_list);
+		return JSONResponse.success(json);
+	}
+	
+
+	/**
+	 * 注册
+	 * 
+	 * @param password
+	 * @param wx_name
+	 * @param wxid
+	 * @return
+	 */
+	/*@RequestMapping(value = "/register", method = RequestMethod.POST)
+	@ResponseBody
+	public JSONResponse register(String password,String repassword, String mobile, String wx_name, String wxid) {
+
+		if(!password.equals(repassword)){
+			return JSONResponse.error("两次输入的密码不一致");
+		}
+		password = Md5Tools.passMd5(password);// 密码加密
+		WeixinUserInfo user = new WeixinUserInfo();
+		user = userService.saveAndUpdate(user);
+		return JSONResponse.success(user);
+	}*/
+
+	
+	  /**
+     * 获取验证码图
+     * @param httpServletRequest
+     * @param httpServletResponse
+     * @throws IOException
+     */
+   /* @RequestMapping(value="/captcha.jpeg")
+    public void getJCaptcha(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException {
+        byte[] captchaChallengeAsJpeg = null;
+        // the output stream to render the captcha image as jpeg into
+        // 将图片写入输出流
+        ByteArrayOutputStream jpegOutputStream = new ByteArrayOutputStream();
+        try {
+            // 获得session Id用于验证码生成.
+            //必须使用相当的id 来验证验证码， session Id是一个好的选择!
+            String captchaId = httpServletRequest.getSession().getId();
+            // 获得验证码图片
+            BufferedImage challenge =
+                    jCaptchaService.getImageChallengeForID(captchaId,
+                            httpServletRequest.getLocale());
+            ByteArrayOutputStream byteArrayInputStream = new ByteArrayOutputStream();
+
+            ImageIO.write(challenge, "jpeg", byteArrayInputStream);
+            captchaChallengeAsJpeg = byteArrayInputStream.toByteArray();
+
+        } catch (IllegalArgumentException e) {
+            try {
+                httpServletResponse.sendError(HttpServletResponse.SC_NOT_FOUND);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            return;
+        } catch (CaptchaServiceException e) {
+            try {
+                httpServletResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            return;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // 写入响应
+        httpServletResponse.setHeader("Cache-Control", "no-store");
+        httpServletResponse.setHeader("Pragma", "no-cache");
+        httpServletResponse.setDateHeader("Expires", 0);
+        httpServletResponse.setContentType("image/jpeg");
+        ServletOutputStream responseOutputStream = null;
+        try {
+            responseOutputStream = httpServletResponse.getOutputStream();
+            responseOutputStream.write(captchaChallengeAsJpeg);
+            responseOutputStream.flush();
+            responseOutputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }*/
+
+}

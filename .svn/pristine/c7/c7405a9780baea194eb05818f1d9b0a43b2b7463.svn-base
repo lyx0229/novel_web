@@ -1,0 +1,20 @@
+package com.novel.api.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.novel.api.entity.PlayTourDetail;
+import com.novel.api.pojo.PlayTourView;
+
+public interface PlayTourDetailRepository extends JpaSpecificationExecutor<PlayTourDetail>,JpaRepository<PlayTourDetail, Integer> {
+	
+	
+	@Query(value="select p.*,u.nick_name,n.goods_name from tbl_play_tour_detail p  "
+         +"left join  tbl_play_tour_goods n on  p.goods_id=n.id "
+         +"left join tbl_user u on p.user_id=u.id where p.novel_id=?1 order by p.update_time desc ", nativeQuery = true)
+	List<PlayTourView> findByPlayTourViewByNovelId(@Param("novel_id")int novel_id);
+}

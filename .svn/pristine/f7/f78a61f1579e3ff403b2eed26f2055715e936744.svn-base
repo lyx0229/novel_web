@@ -1,0 +1,68 @@
+package com.novel.api.service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.novel.api.entity.Novel;
+import com.novel.api.entity.NovelStore;
+import com.novel.api.pojo.NovelView;
+import com.novel.api.repository.NovelRepository;
+import com.novel.api.repository.NovelStoreRepository;
+
+
+@Service
+public class NovelService {
+	@Autowired
+	private NovelRepository novelRep;
+	
+	@Autowired
+	private NovelStoreRepository novelStoreRepository;
+	
+	public NovelStore saveAndUpdate(NovelStore po){
+		return novelStoreRepository.saveAndFlush(po);
+	}
+	
+	
+	public Novel findNovelByID(int id){
+		return novelRep.findById(id).get();
+	}
+	
+	public List<Novel> findSearch(Novel model) {
+	    @SuppressWarnings("serial")
+		List<Novel> result = novelRep.findAll(new Specification<Novel>() {
+	        @Override
+	        public Predicate toPredicate(Root<Novel> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+	            List<Predicate> list = new ArrayList<Predicate>();
+
+	            if (model.getSex_status() != 0) {
+	                list.add(cb.equal(root.get("sex_status").as(Integer.class), model.getSex_status()));
+	            }
+
+	            if (model.getType_status() != 0) {
+	                list.add(cb.equal(root.get("type_status").as(Integer.class), model.getType_status()));
+	            }
+
+	            Predicate[] p = new Predicate[list.size()];
+	            return cb.and(list.toArray(p));
+	        }
+
+	    });
+
+	    return result;
+	}
+	
+	
+   public List<NovelView> findByNovelViewByUserid(int user_id) {
+	   return novelRep.findByNovelViewByUserid(user_id);
+      
+    }
+}

@@ -1,0 +1,53 @@
+package com.novel.api.pojo;
+
+import java.io.UnsupportedEncodingException;
+
+import javax.persistence.Entity;
+
+import org.apache.tomcat.util.codec.binary.Base64;
+
+import com.novel.api.entity.PlayTourDetail;
+/**
+ * 打赏记录
+ * @author Administrator
+ *
+ */
+@Entity
+public class PlayTourView extends PlayTourDetail{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2616115346049761821L;
+
+	private String nick_name;
+	private String head_imgurl;
+	private String goods_name;
+	
+	
+	public String getHead_imgurl() {
+		return head_imgurl;
+	}
+	public void setHead_imgurl(String head_imgurl) {
+		this.head_imgurl = head_imgurl;
+	}
+	public String getNick_name() {
+		try {
+			nick_name = new String(Base64.decodeBase64(nick_name.getBytes()), "utf-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		return nick_name;
+	}
+	public void setNick_name(String nick_name) {
+		this.nick_name = nick_name;
+	}
+	public String getGoods_name() {
+		return goods_name;
+	}
+	public void setGoods_name(String goods_name) {
+		this.goods_name = goods_name;
+	}
+	
+	
+}

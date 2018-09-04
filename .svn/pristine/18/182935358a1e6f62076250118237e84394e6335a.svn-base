@@ -1,0 +1,13 @@
+package com.novel.api.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+import com.novel.api.entity.RechargeDetail;
+
+public interface RechargeDetailRepository extends JpaSpecificationExecutor<RechargeDetail>,JpaRepository<RechargeDetail, Integer> {
+	
+	List<RechargeDetail> findRechargeDetailByUserID(long user_id);
+}

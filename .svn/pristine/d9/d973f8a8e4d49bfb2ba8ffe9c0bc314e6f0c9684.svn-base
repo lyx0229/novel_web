@@ -1,0 +1,14 @@
+﻿<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>demo</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+<body>
+<div th:text="${weixinUserInfo.open_id}">openid</div>
+<div th:text="${weixinUserInfo.nick_name}">昵称：</div>
+<div th:text="${weixinUserInfo.province}">省：</div>
+<div th:text="${weixinUserInfo.city}">市：</div>
+<div>图片：<img th:src="${weixinUserInfo.head_imgurl}"></div>
+</body>
+</html>

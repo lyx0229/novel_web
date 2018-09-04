@@ -1,0 +1,125 @@
+package com.novel.api.entity;
+
+import java.io.Serializable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.GenerationType;
+import java.util.Date;
+   /**
+    * 小说信息表
+    * Fri Jul 13 15:14:36 CST 2018 lyx
+    */ 
+ @Entity 
+ @Table(name = "tbl_novel") 
+
+
+public class Novel implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 961781266925776670L;
+	@Id 
+	@GeneratedValue(strategy = GenerationType.IDENTITY) 
+	private long id;
+	@Column 
+	private String novel_name;
+	@Column 
+	private String novel_imgurl;
+	@Column 
+	private String novel_brief;
+	@Column 
+	private String novel_author;
+	@Column 
+	private int sex_status;
+	@Column 
+	private int type_status;
+	@Column 
+	private int novel_state;
+	@Column 
+	private String novel_new_chapter;
+	@Column 
+	private Date novel_update_time;
+	@Column 
+	private long novel_number_votes;
+	@Column 
+	private String novel_page_url;
+	
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getNovel_name() {
+		return novel_name;
+	}
+	public void setNovel_name(String novel_name) {
+		this.novel_name = novel_name;
+	}
+	public String getNovel_imgurl() {
+		return novel_imgurl;
+	}
+	public void setNovel_imgurl(String novel_imgurl) {
+		this.novel_imgurl = novel_imgurl;
+	}
+	public String getNovel_brief() {
+		return novel_brief;
+	}
+	public void setNovel_brief(String novel_brief) {
+		this.novel_brief = novel_brief;
+	}
+	public String getNovel_author() {
+		return novel_author;
+	}
+	public void setNovel_author(String novel_author) {
+		this.novel_author = novel_author;
+	}
+	public int getSex_status() {
+		return sex_status;
+	}
+	public void setSex_status(int sex_status) {
+		this.sex_status = sex_status;
+	}
+	public int getType_status() {
+		return type_status;
+	}
+	public void setType_status(int type_status) {
+		this.type_status = type_status;
+	}
+	public int getNovel_state() {
+		return novel_state;
+	}
+	public void setNovel_state(int novel_state) {
+		this.novel_state = novel_state;
+	}
+	public String getNovel_new_chapter() {
+		return novel_new_chapter;
+	}
+	public void setNovel_new_chapter(String novel_new_chapter) {
+		this.novel_new_chapter = novel_new_chapter;
+	}
+	public Date getNovel_update_time() {
+		return novel_update_time;
+	}
+	public void setNovel_update_time(Date novel_update_time) {
+		this.novel_update_time = novel_update_time;
+	}
+	public long getNovel_number_votes() {
+		return novel_number_votes;
+	}
+	public void setNovel_number_votes(long novel_number_votes) {
+		this.novel_number_votes = novel_number_votes;
+	}
+	public String getNovel_page_url() {
+		return novel_page_url;
+	}
+	public void setNovel_page_url(String novel_page_url) {
+		this.novel_page_url = novel_page_url;
+	}
+	
+	
+}
+

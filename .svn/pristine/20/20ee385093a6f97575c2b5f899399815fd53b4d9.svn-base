@@ -1,0 +1,104 @@
+package com.novel.api.entity;
+
+import java.io.Serializable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.GenerationType;
+import java.util.Date;
+   /**
+    * tbl_recharge_detail 
+    * 充值明细表
+    * Mon Jun 25 12:10:49 CST 2018 lyx
+    */ 
+ @Entity 
+ @Table(name = "tbl_recharge_detail") 
+
+
+public class RechargeDetail implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3144658542036796064L;
+	@Id 
+	@GeneratedValue(strategy = GenerationType.IDENTITY) 
+	private long id;
+	@Column(name = "user_id", columnDefinition = "BIGINT")
+	private long userID;
+	@Column 
+	private String template_id;
+	@Column 
+	private double recharge_money;
+	@Column 
+	private int book_peas;
+	@Column 
+	private int pre_book_peas;
+	@Column 
+	private String order_no;
+	@Column 
+	private int status;
+	@Column 
+	private Date create_time;
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public long getUserID() {
+		return userID;
+	}
+	public void setUserID(long userID) {
+		this.userID = userID;
+	}
+	public String getTemplate_id() {
+		return template_id;
+	}
+	public void setTemplate_id(String template_id) {
+		this.template_id = template_id;
+	}
+	public double getRecharge_money() {
+		return recharge_money;
+	}
+	public void setRecharge_money(double recharge_money) {
+		this.recharge_money = recharge_money;
+	}
+	public int getBook_peas() {
+		return book_peas;
+	}
+	public void setBook_peas(int book_peas) {
+		this.book_peas = book_peas;
+	}
+	public int getPre_book_peas() {
+		return pre_book_peas;
+	}
+	public void setPre_book_peas(int pre_book_peas) {
+		this.pre_book_peas = pre_book_peas;
+	}
+	public String getOrder_no() {
+		return order_no;
+	}
+	public void setOrder_no(String order_no) {
+		this.order_no = order_no;
+	}
+	public int getStatus() {
+		return status;
+	}
+	public void setStatus(int status) {
+		this.status = status;
+	}
+	public Date getCreate_time() {
+		return create_time;
+	}
+	public void setCreate_time(Date create_time) {
+		this.create_time = create_time;
+	}
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+	
+	
+}
+

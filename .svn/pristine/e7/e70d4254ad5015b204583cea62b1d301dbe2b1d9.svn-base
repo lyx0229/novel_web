@@ -1,0 +1,85 @@
+package com.novel.api.entity;
+
+import java.io.Serializable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.GenerationType;
+import java.util.Date;
+   /**
+    * 阅读记录
+    * Wed Jul 18 14:14:28 CST 2018 lyx
+    */ 
+ @Entity 
+ @Table(name = "tbl_novel_record") 
+
+
+public class NovelRecord implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2317263593607382058L;
+	@Id 
+	@GeneratedValue(strategy = GenerationType.IDENTITY) 
+	private long id;
+	@Column 
+	private int user_id;
+	@Column 
+	private int novel_id;
+	@Column 
+	private String novel_name;
+	@Column 
+	private String novel_new_chapter;
+	@Column 
+	private Date update_time;
+	@Column 
+	private String novel_url;
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public int getUser_id() {
+		return user_id;
+	}
+	public void setUser_id(int user_id) {
+		this.user_id = user_id;
+	}
+	public int getNovel_id() {
+		return novel_id;
+	}
+	public void setNovel_id(int novel_id) {
+		this.novel_id = novel_id;
+	}
+	public String getNovel_name() {
+		return novel_name;
+	}
+	public void setNovel_name(String novel_name) {
+		this.novel_name = novel_name;
+	}
+	public String getNovel_new_chapter() {
+		return novel_new_chapter;
+	}
+	public void setNovel_new_chapter(String novel_new_chapter) {
+		this.novel_new_chapter = novel_new_chapter;
+	}
+	public Date getUpdate_time() {
+		return update_time;
+	}
+	public void setUpdate_time(Date update_time) {
+		this.update_time = update_time;
+	}
+	public String getNovel_url() {
+		return novel_url;
+	}
+	public void setNovel_url(String novel_url) {
+		this.novel_url = novel_url;
+	}
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+}
+

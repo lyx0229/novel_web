@@ -1,0 +1,30 @@
+package com.novel;
+
+import java.util.Set;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.context.junit4.SpringRunner;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class PNovelsApplicationTests {
+	  @Autowired
+		StringRedisTemplate stringRedisTemplate;
+	@Test
+	public void contextLoads() {
+		
+		 String openid="11jj1j1j";
+		 stringRedisTemplate.opsForSet().add("openidset",openid);
+		 stringRedisTemplate.opsForSet().add("openidset","121");
+		 Set<String> a=stringRedisTemplate.opsForSet().members("openidset");
+		 System.out.println(a);
+		 boolean b=stringRedisTemplate.opsForSet().isMember("openidset","121");
+		 System.out.println(a);
+		 System.out.println(b);
+	}
+
+}

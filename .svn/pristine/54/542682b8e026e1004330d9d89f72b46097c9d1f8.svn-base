@@ -1,0 +1,21 @@
+package com.novel.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.stereotype.Component;
+/**
+ * 获取配置信息
+ * @author Administrator
+ *
+ */
+@Component
+@PropertySource("classpath:business.properties")
+public class BusinessConfig {
+
+    @Value("${bookpeas}")
+	public int bookpeas;//每天签到获取的书豆
+    
+    @Value("${chapter_peas}")
+    public int chapter_peas;//每章节购买所需书豆
+
+}

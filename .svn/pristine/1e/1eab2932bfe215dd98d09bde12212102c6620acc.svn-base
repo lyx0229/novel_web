@@ -1,0 +1,205 @@
+package com.novel.api.entity;
+
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import org.apache.tomcat.util.codec.binary.Base64;
+
+/**
+ * 类名: WeixinUserInfo <br/>
+ * 描述: 微信用户的基本信息 <br/>
+ */
+@Entity
+@Table(name = "tbl_user")
+public class WeixinUserInfo implements Serializable {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7463609578075724747L;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int id;// 用户ID
+	// 用户的标识
+	@Column
+	private String open_id;
+	// 关注状态（1是关注，0是未关注），未关注时获取不到其余信息
+	@Column
+	private int subscribe;
+	// 用户关注时间，为时间戳。如果用户曾多次关注，则取最后关注时间
+	@Column
+	private Date subscribe_time;
+	// 昵称
+	@Column
+	private String nick_name;
+	// 用户的性别（1是男性，2是女性，0是未知）
+	@Column
+	private int sex;
+	// 用户所在省份
+	@Column
+	private String province;
+	// 用户所在城市
+	private String city;
+	// 用户所在国家
+	private String country;
+	// 用户头像
+	@Column
+	private String head_imgurl;
+	@Column
+	private int vip_status;// VIP会员状态(1 默认 非VIP 2)
+	@Column
+	private Date vip_time;// VIP创建时间
+	@Column
+	private Date vip_end_time;// VIP创建时间
+	@Column
+	private int book_peas;// 书豆
+	@Column
+	private int read_points;// 阅读积分
+
+
+	public String getCountry() {
+		return country;
+	}
+
+	public void setCountry(String country) {
+		this.country = country;
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public int getVip_status() {
+		return vip_status;
+	}
+
+	public void setVip_status(int vip_status) {
+		this.vip_status = vip_status;
+	}
+
+	public Date getVip_end_time() {
+		return vip_end_time;
+	}
+
+	public void setVip_end_time(Date vip_end_time) {
+		this.vip_end_time = vip_end_time;
+	}
+
+	public Date getVip_time() {
+		return vip_time;
+	}
+
+	public void setVip_time(Date vip_time) {
+		this.vip_time = vip_time;
+	}
+
+	public int getBook_peas() {
+		return book_peas;
+	}
+
+	public void setBook_peas(int book_peas) {
+		this.book_peas = book_peas;
+	}
+
+	public int getRead_points() {
+		return read_points;
+	}
+
+	public void setRead_points(int read_points) {
+		this.read_points = read_points;
+	}
+
+	public int getSubscribe() {
+		return subscribe;
+	}
+
+	public void setSubscribe(int subscribe) {
+		this.subscribe = subscribe;
+	}
+
+
+	public int getSex() {
+		return sex;
+	}
+
+	public void setSex(int sex) {
+		this.sex = sex;
+	}
+
+
+	public String getProvince() {
+		return province;
+	}
+
+	public void setProvince(String province) {
+		this.province = province;
+	}
+
+	public String getCity() {
+		return city;
+	}
+
+	public void setCity(String city) {
+		this.city = city;
+	}
+
+
+	public String getOpen_id() {
+		return open_id;
+	}
+
+	public void setOpen_id(String open_id) {
+		this.open_id = open_id;
+	}
+
+	public Date getSubscribe_time() {
+		return subscribe_time;
+	}
+
+	public void setSubscribe_time(Date subscribe_time) {
+		this.subscribe_time = subscribe_time;
+	}
+
+	public String getNick_name()   {
+		try {
+			nick_name = new String(Base64.decodeBase64(nick_name.getBytes()), "utf-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		return nick_name;
+	}
+
+	public void setNick_name(String nick_name)  {
+		this.nick_name = nick_name;
+	}
+
+	public String getHead_imgurl() {
+		return head_imgurl;
+	}
+
+	public void setHead_imgurl(String head_imgurl) {
+		this.head_imgurl = head_imgurl;
+	}
+
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+
+	public String toString(){
+		return "data[id:"+id+",open_id:"+open_id+",subscribe:"+subscribe+",nick_name:"+nick_name+",sex:"+sex+",province:"+province
+				+",city:"+city+",head_imgurl:"+head_imgurl+",vip_status:"+vip_status+",vip_time:"+vip_time+",vip_end_time:"+vip_end_time
+				+",book_peas:"+book_peas+",read_points:"+read_points+"]";
+	}
+}

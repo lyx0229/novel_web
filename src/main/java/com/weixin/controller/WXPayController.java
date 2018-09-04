@@ -1,0 +1,281 @@
+package com.weixin.controller;
+
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import javax.servlet.ServletInputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.novel.api.entity.JSONResponse;
+import com.novel.api.entity.RechargeDetail;
+import com.novel.api.entity.RechargeTemplate;
+import com.novel.api.entity.WeixinUserInfo;
+import com.novel.api.service.RechargeService;
+import com.novel.api.service.UserService;
+import com.novel.config.BusinessConfig;
+import com.weixin.entity.UnifiedOrderRequest;
+import com.weixin.entity.UnifiedOrderRespose;
+import com.weixin.service.WXPayService;
+import com.weixin.utils.WXPayUtil;
+
+ 
+/**
+ * 微信支付controller
+ * 1.用户发起微信支付，初始化数据、调用统一下单接口。生成JSAPI页面调用的支付参数并签名（paySign,prepay_id,nonceStr,timestamp）
+ * 2.js如果返回Ok，提示支付成功，实际支付结果已收到通知为主。
+ * 3.在微信支付结果通知中，获取微信提供的最终用户支付结果信息，支付结果等信息更新用户支付记录中
+ * 4.根据微信支付结果通知中的微信订单号调用查询接口，如果查询是已经支付成功，则发送支付成功模板信息给客户
+ *
+ */
+@Controller
+@RequestMapping(value = "/wx_pay")
+public class WXPayController{
+	private static Logger log = LoggerFactory.getLogger(WXPayController.class);
+	@Autowired
+	RechargeService rechargeService;
+	@Autowired
+	WXPayService wxPayService;
+	@Autowired
+	UserService userService;
+	@Autowired
+	BusinessConfig  businessConfig;
+	/**
+	 * 获取终端IP
+	 * @param request
+	 * @return
+	 * @throws UnknownHostException 
+	 */
+	public static String getIpAddr() throws UnknownHostException  {  
+		InetAddress address = InetAddress.getLocalHost();  
+		String ip=address .getHostAddress().toString();  
+		return  ip;  
+	 } 
+	/**
+	 * 支付初始化
+	 * @param payMoney
+	 * @return
+	 * @throws UnknownHostException 
+	 */
+	@RequestMapping(value="/to_pay_init",method={RequestMethod.GET,RequestMethod.POST})
+	@ResponseBody
+	public Map<String,Object> toPay(HttpServletRequest request,@RequestParam(value="template_id",required=true) int template_id,@RequestParam(value="user_id",required=true) int user_id) throws UnknownHostException{
+		log.info("支付初始化");
+		log.info("template_id："+template_id+"user_id:"+user_id);
+		RechargeTemplate template=rechargeService.findRechargeTemplateByID(template_id);
+		WeixinUserInfo userinfo=userService.findUserById(user_id);
+		Map<String,Object> map = new HashMap<>();
+		String orderId = String.valueOf(WXPayUtil.generateUUID());
+		String noncestr = WXPayUtil.generateNonceStr();
+		Map<String,String> requestMap = new HashMap<String, String>();
+		requestMap.put("appId", businessConfig.APPID);
+		requestMap.put("userWeixinOpenId",userinfo.getOpen_id());
+		requestMap.put("out_trade_no",orderId);
+		requestMap.put("mch_id", businessConfig.MEMBERID);
+		requestMap.put("payMoney", String.valueOf(Math.round(template.getRecharge_money()*100)));
+		requestMap.put("spbill_create_ip", getIpAddr());
+		requestMap.put("notify_url", businessConfig.NOTIFY_URL);
+		requestMap.put("noncestr", noncestr);
+		requestMap.put("body","chongzhi");
+		requestMap.put("detail","goumai");
+		Map<String,Object> requestInfo = WXPayUtil.createOrderInfo(requestMap);
+		log.info("requestInfo:"+requestInfo);
+		String orderInfo_toString = (String) requestInfo.get("orderInfo_toString");
+		 //判断返回码
+		UnifiedOrderRespose orderResponse = WXPayUtil.httpOrder(orderInfo_toString);// 调用统一下单接口
+		log.info("return_code:"+orderResponse.getReturn_code());
+		//根据微信文档return_code 和result_code都为SUCCESS的时候才会返回code_url  
+		if(null!=orderResponse  && "SUCCESS".equals(orderResponse.getReturn_code()) && "SUCCESS".equals(orderResponse.getResult_code())){  
+			String timestamp = String.valueOf(WXPayUtil.getCurrentTimestamp());
+			map.put("timeStamp",timestamp);
+			map.put("orderNo", orderId);
+			map.put("nonceStr",noncestr);
+			UnifiedOrderRequest unifiedOrderRequest = (UnifiedOrderRequest) requestInfo.get("unifiedOrderRequest");
+			map.put("unifiedOrderRequest",unifiedOrderRequest);
+			SortedMap<String, String> packageParams = new TreeMap<String, String>();  
+			
+			map.put("appId",businessConfig.APPID);  
+			map.put("signType","MD5");  
+		    String packages = "prepay_id="+orderResponse.getPrepay_id();
+		    System.out.println("packages:"+packages);
+		    map.put("package",packages); 
+		    
+		    packageParams.put("appId",businessConfig.APPID); 
+			packageParams.put("timeStamp",timestamp);
+			packageParams.put("nonceStr",noncestr);
+			packageParams.put("package",packages);
+			packageParams.put("signType","MD5");  
+			
+			String sign = null;//
+			try {
+				sign = WXPayUtil.generateSignature(packageParams,businessConfig.KEY);
+			} catch (Exception e) {
+				map.put("result",-1);
+				e.printStackTrace();
+			}
+			if(sign!=null && !"".equals(sign)){
+				
+				RechargeDetail payInfo=new RechargeDetail();
+				payInfo.setBook_peas(template.getBook_peas());
+				payInfo.setUser_id(user_id);
+				payInfo.setTemplate_id(template_id);
+				payInfo.setOrder_no(orderId);
+				payInfo.setRemark("购买充值");
+				payInfo.setRecharge_money(template.getRecharge_money());
+				payInfo.setRecharge_time(new Date());
+				payInfo.setPre_book_peas(template.getPre_book_peas());
+				rechargeService.saveAndUpdate(payInfo);
+				map.put("paySign",sign);
+				map.put("result",1);
+			}else{
+				map.put("result",-1);
+			}
+			map.put("prepay_id",orderResponse.getPrepay_id());
+			log.info("map:"+map);
+		    return map;  
+		}else{ //不成功
+			String text = "调用微信支付出错，返回状态码："+orderResponse.getReturn_code()+"，返回信息："+orderResponse.getReturn_msg();
+			if(orderResponse.getErr_code()!=null && !"".equals(orderResponse.getErr_code())){
+				text = text +"，错误码："+orderResponse.getErr_code()+"，错误描述："+orderResponse.getErr_code_des();
+			}
+			log.error(text);
+			map.put("result",-1);
+		    return map;  
+		}
+	}
+	
+	/**
+	 * 异步回调接口
+	 * @param request
+	 * @param response
+	 * @throws Exception
+	 */
+	@RequestMapping(value="/payment_notice",method={RequestMethod.GET,RequestMethod.POST} ,produces="text/html;charset=utf-8")
+	@ResponseBody
+	public Map<String,String> WeixinParentNotifyPage(HttpServletRequest request,HttpServletResponse response) throws Exception{
+		ServletInputStream instream = request.getInputStream();
+		StringBuffer sb = new StringBuffer();
+		int len = -1;
+		byte[] buffer = new byte[1024];
+		while((len = instream.read(buffer)) != -1){
+			sb.append(new String(buffer,0,len));
+		}
+		instream.close();
+		log.error("支付通知回调信息："+sb.toString());
+		Map<String,String> map = WXPayUtil.xmlToMap(sb.toString());//接受微信的回调的通知参数
+		Map<String,String> return_data = new HashMap<String,String>();
+		//判断签名是否正确
+		if(WXPayUtil.isSignatureValid(map, businessConfig.KEY)){
+			if(map.get("return_code").toString().equals("FAIL")){
+				return_data.put("return_code", "FAIL");
+				return_data.put("return_msg", map.get("return_msg"));
+				return return_data;
+			}else if(map.get("return_code").toString().equals("SUCCESS")){
+				String result_code = map.get("result_code").toString();
+				String out_trade_no = map.get("out_trade_no").toString();
+				//获得你自己的订单详情
+				RechargeDetail payInfo = rechargeService.findRechargeDetailByOrderNo(out_trade_no);
+				if(payInfo == null){
+					return_data.put("return_code", "FAIL");
+					return_data.put("return_msg", "订单不存在");
+					return return_data;
+				}else{
+					//0，未成功，1，已成功,2支付失败，3支付正在处理中
+					if(result_code.equals("SUCCESS")){//支付成功
+						//如果订单已经支付直接返回成功
+						if(payInfo.getResult()==1){
+							return_data.put("return_code", "SUCCESS");
+							return_data.put("return_msg", "OK");
+							return return_data;
+						}else{
+							String sign = map.get("sign").toString();
+							log.error("sign："+sign);
+							String total_fee = map.get("total_fee").toString();//订单金额
+							if((String.valueOf(payInfo.getRecharge_money())).equals(total_fee)){//订单金额是否一致
+								return_data.put("return_code", "FAIL");
+								return_data.put("return_msg", "金额异常");
+								return return_data;
+							}else{
+								payInfo.setResult_code(result_code);
+								payInfo.setResult_info("支付成功");
+								payInfo.setResult(1);
+								payInfo.setResult_time(new Date());
+								payInfo = wxPayService.saveRechargeAndUserInfo(payInfo);
+								if(payInfo ==null){
+									return_data.put("return_code", "FAIL");
+									return_data.put("return_msg", "更新订单失败");
+									return return_data;
+								}
+								/*else{
+									payInfo.setResult(2);
+									payInfo = rechargeService.saveAndUpdate(payInfo);
+									if(payInfo ==null){
+										return_data.put("return_code", "FAIL");
+										return_data.put("return_msg", "更新订单失败");
+										return return_data;
+									}else{
+										return_data.put("return_code", "SUCCESS");
+										return_data.put("return_msg", "更新订单成功");
+										return return_data;
+									}
+								}*/
+							}
+						}
+					}else{//支付失败，更新支付结果
+						if(payInfo!=null){
+							payInfo.setResult_code(result_code);
+							payInfo.setResult(2);
+							payInfo.setResult_code(map.get("err_code").toString());
+							payInfo.setResult_info(map.get("err_code_des").toString());
+							rechargeService.saveAndUpdate(payInfo);
+						} 
+						return_data.put("return_code", "FAIL");
+						return_data.put("return_msg",map.get("return_msg").toString());
+						return return_data;
+					}
+				}
+			}
+		}else{
+			return_data.put("return_code", "FAIL");
+			return_data.put("return_msg", "签名错误");
+		}
+		String xml = WXPayUtil.GetMapToXML(return_data);
+		log.error("支付通知回调结果："+xml);
+		return return_data;
+	}
+	
+	/**
+	 * 取消支付
+	 * @param payMoney
+	 * @return
+	 * @throws UnknownHostException 
+	 */
+	@RequestMapping(value="/to_pay_cancel",method={RequestMethod.GET,RequestMethod.POST})
+	@ResponseBody
+	public JSONResponse  to_pay_cancel(HttpServletRequest request,@RequestParam(value="orderNo",required=true) String orderNo) throws UnknownHostException{
+		log.info("支付取消");
+		log.info("orderNo："+orderNo);
+		RechargeDetail payInfo = rechargeService.findRechargeDetailByOrderNo(orderNo);
+		payInfo.setResult(3);
+		payInfo.setResult_info("支付取消");
+		payInfo.setResult_code("CANCEL");
+		payInfo.setResult_time(new Date());
+		payInfo=rechargeService.saveAndUpdate(payInfo);
+		return JSONResponse.success(payInfo);
+	}
+}
